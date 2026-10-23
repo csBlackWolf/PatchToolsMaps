@@ -1,6 +1,7 @@
 name: Feature idea / Funktionswunsch
 description: Share an idea for PatchToolsMaps. Deutsch und Englisch sind willkommen.
 title: "[Idea]: "
+labels: ["status: new"]
 body:
   - type: markdown
     attributes:
@@ -27,7 +28,7 @@ body:
   - type: input
     id: game
     attributes:
-      label: WoW version / WoW-Version
+      label: WoW-Version
       description: Optional, for example Forever. / Optional, zum Beispiel Forever.
     validations:
       required: false

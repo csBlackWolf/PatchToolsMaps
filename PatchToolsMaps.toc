@@ -1,5 +1,6 @@
 ## Interface: 11509, 16001
 ## Title: PatchToolsMaps
+## IconTexture: Interface\AddOns\PatchTools\Media\Icon
 ## Notes: Optional world map controls for PatchTools.
 ## Notes-deDE: Optionale Weltkartenfunktionen für PatchTools.
 ## Author: Patch & Zen

@@ -1,0 +1,51 @@
+name: Issue status
+on:
+  issues:
+    types: [opened, labeled]
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: issue-status-${{ github.event.issue.number }}
+  cancel-in-progress: false
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Keep one visible status
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: python
+        run: |
+          import json
+          import os
+          import urllib.request
+
+          statuses = {
+              "status: new", "status: reviewed", "status: planned",
+              "status: in progress", "status: next release",
+          }
+          with open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8") as source:
+              event = json.load(source)
+          endpoint = "https://api.github.com/repos/" + os.environ["GITHUB_REPOSITORY"]
+          endpoint += "/issues/" + str(event["issue"]["number"]) + "/labels"
+
+          def request(method, suffix="", data=None):
+              body = json.dumps(data).encode() if data is not None else None
+              req = urllib.request.Request(endpoint + suffix, data=body, method=method,
+                  headers={"Authorization": "Bearer " + os.environ["GH_TOKEN"],
+                           "Accept": "application/vnd.github+json",
+                           "Content-Type": "application/json"})
+              with urllib.request.urlopen(req) as response:
+                  return json.load(response)
+
+          current = {label["name"] for label in request("GET")}
+          if event["action"] == "opened":
+              if not current.intersection(statuses):
+                  request("POST", data={"labels": ["status: new"]})
+          else:
+              selected = event.get("label", {}).get("name")
+              if selected in statuses and selected in current:
+                  from urllib.parse import quote
+                  for previous in sorted(current.intersection(statuses) - {selected}):
+                      request("DELETE", "/" + quote(previous, safe=""))

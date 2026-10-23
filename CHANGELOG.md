@@ -1,12 +1,13 @@
-# PatchToolsMaps 0.1.0 — unreleased preparation, 2026-10-23
+# PatchToolsMaps 0.1.0 — 2026-10-23
 
 First regular release. Requires PatchTools 0.7.0 or newer.
 
 - Move and resize the world map; save window position and size.
-- Native zoom; the additional zoom step is temporarily disabled pending combat-taint verification.
+- Native zoom; the additional zoom step is temporarily disabled for combat compatibility.
 - Classic, semi-transparent fog (default) and fully revealed map modes.
 - Reset position, size and zoom; an open map closes so it rebuilds cleanly on reopening.
-- Compact square resize handle at the bottom-right corner.
+- Compact square resize handle at the bottom-right corner. Controls remain visible during combat; resizing waits until combat ends.
+- Keep addon reveal masks separate from Blizzard map state; do not change its zoom-level table.
 - Built-in English and German; settings appear above About PatchTools in the base addon.
 - Guard map opening before Blizzard has initialized its zoom levels.
 

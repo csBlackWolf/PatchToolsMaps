@@ -11,7 +11,7 @@ Optional world map tools for **World of Warcraft: Forever**, with built-in **Eng
 - Move the world map with a drag bar.
 - Resize it with a small square handle at the bottom-right corner.
 - Save your preferred position and size between sessions.
-- Use the native mouse-wheel zoom. The extra zoom step is temporarily disabled while a combat-taint report is being checked.
+- Use the native mouse-wheel zoom. The extra zoom step is temporarily disabled for combat compatibility.
 - Choose **Classic**, **Semi-transparent fog** (default), or **Fully revealed** for unexplored areas.
 - Reset position, size and zoom with one button. An open map closes so it can rebuild cleanly when reopened.
 
@@ -52,15 +52,15 @@ Some existing beta installations use `_classic_beta_` instead. Choose the folder
 
 ## Changelog
 
-### 2026-10-23 — Release preparation (local test 0.1.0-local.8)
+### 2026-10-23 — 0.1.0
 
-No release tag or downloadable CurseForge file has been published yet. A combat fix is undergoing in-game retesting.
+First regular release. Requires PatchTools 0.7.0 or newer.
 
 - Keep move/resize controls visible during combat; ignore drag attempts until combat ends.
 - Avoid modifying Blizzard's zoom table or registering addon textures in its shared mask list.
-- Temporarily disable the extra zoom step while checking the combat report.
+- Keep the additional zoom step disabled for combat compatibility; ordinary zoom is unchanged.
 
-- Added optional map settings, movement, resizing and extended zoom.
+- Added optional map settings, movement and resizing.
 - Added three display modes for unexplored areas.
 - Added saved window settings and a reset button that closes an open map.
 - Fixed opening the map before its zoom levels are ready.

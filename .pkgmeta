@@ -13,3 +13,6 @@ ignore:
   - tools
   - RESEARCH.md
   - CATALOG-MANIFEST.json
+  - CATALOG-MANIFEST-ERA.json
+
+manual-changelog: CHANGELOG.md

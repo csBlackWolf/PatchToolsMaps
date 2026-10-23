@@ -16,6 +16,7 @@ if(args.Length>1 && (args[1]=="extract" || args[1]=="verify-textures")) {
     var build=new BuildInstance();
     build.Settings.BaseDir=gameRoot;
     build.Settings.Product=product;
+    build.Settings.Locale=Enum.Parse<RootInstance.LocaleFlags>(Environment.GetEnvironmentVariable("MAPEXTRACT_LOCALE") ?? "enUS");
     build.Settings.TryCDN=false;
     build.Settings.ListfileFallback=false;
     build.Settings.CacheDir=Path.Combine(folder,"cache");
@@ -23,12 +24,14 @@ if(args.Length>1 && (args[1]=="extract" || args[1]=="verify-textures")) {
     build.Load();
     File.WriteAllText(Path.Combine(folder,"extraction-meta.json"),JsonSerializer.Serialize(new {
         version=clientVersion,product,buildConfig=config[Array.IndexOf(fields,"Build Key")],
-        cdnConfig=config[Array.IndexOf(fields,"CDN Key")],localOnly=true
+        cdnConfig=config[Array.IndexOf(fields,"CDN Key")],locale=build.Settings.Locale.ToString(),localOnly=true
     }));
     if(args[1]=="verify-textures") {
         var tiles=JsonDocument.Parse(File.ReadAllText(Path.Combine(folder,"WorldMapOverlayTile.json")));
         var checkedTextures=new List<object>();
-        foreach(var id in tiles.RootElement.EnumerateArray().Select(r=>r.GetProperty("FileDataID").GetUInt32()).Distinct().Order()) {
+        var requiredPath=Path.Combine(folder,"required-textures.json");
+        var required=File.Exists(requiredPath) ? JsonSerializer.Deserialize<HashSet<uint>>(File.ReadAllText(requiredPath)) : null;
+        foreach(var id in tiles.RootElement.EnumerateArray().Select(r=>r.GetProperty("FileDataID").GetUInt32()).Distinct().Order().Where(id=>required==null || required.Contains(id))) {
             var bytes=build.OpenFileByFDID(id);
             var magic=System.Text.Encoding.ASCII.GetString(bytes,0,4);
             if(magic!="BLP2") throw new Exception($"Unexpected texture format {magic} for {id}");

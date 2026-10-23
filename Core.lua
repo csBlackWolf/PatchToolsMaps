@@ -36,7 +36,7 @@ function Maps:Attach()
     if self.map or (InCombatLockdown and InCombatLockdown()) or not WorldMapFrame or not WorldMapFrame.GetCanvas then return end
     self.map=WorldMapFrame
     self:InstallWindow(self.map)
-    local function Reveal() self:RefreshReveal() end
+    local function Reveal() self.extraZoomScale=nil; self:RefreshReveal() end
     for _,method in ipairs({"OnMapChanged","OnCanvasSizeChanged"}) do
         if type(self.map[method])=="function" then hooksecurefunc(self.map,method,Reveal) end
     end
@@ -60,15 +60,15 @@ function Maps:Initialize()
     end
     if type(PatchToolsMapsDB)~="table" then PatchToolsMapsDB={} end
     self.db=PatchToolsMapsDB
-    for key,value in pairs({movable=true,resizable=true,extendedZoom=false,scale=1,mode="mist"}) do
+    for key,value in pairs({movable=true,resizable=true,extendedZoom=true,scale=1,mode="mist"}) do
         if type(self.db[key])~=type(value) then self.db[key]=value end
     end
     if self.db.mode~="classic" and self.db.mode~="mist" and self.db.mode~="full" then self.db.mode="mist" end
     local scale=self.db.scale
-    self.db.scale=scale==scale and math.max(.6,math.min(1.5,scale)) or 1
+    self.db.scale=scale==scale and scale<math.huge and math.max(.6,scale) or 1
     for _,key in ipairs({"x","y"}) do
         local value=self.db[key]
-        if type(value)~="number" or value~=value or value<0 or value>1 then self.db[key]=nil end
+        if type(value)~="number" or value~=value or math.abs(value)==math.huge then self.db[key]=nil end
     end
     if not self.db.x or not self.db.y then self.db.x,self.db.y=nil,nil end
     if type(self.db.knownOverlays)~="table" then self.db.knownOverlays={} end
@@ -76,7 +76,19 @@ function Maps:Initialize()
         if type(value)~="table" then self.db.knownOverlays[key]=nil end
     end
     self.initialized=PT:RegisterOptionsPage("maps",self:T("TITLE"),function(parent) self:BuildOptions(parent) end)
-    if self.initialized then self:Attach() end
+    if self.initialized then
+        SLASH_PATCHTOOLSMAPS1="/ptmaps"
+        SLASH_PATCHTOOLSMAPS2="/patchtoolsmaps"
+        SlashCmdList.PATCHTOOLSMAPS=function(message)
+            if (message or ""):lower():match("^%s*status%s*$") then
+                self:PrintZoomStatus()
+            elseif (message or ""):lower():match("^%s*reset%s*$") then
+                self:ResetMap()
+                PT:Print(self:T(InCombatLockdown and InCombatLockdown() and "RESET_PENDING" or "RESET_DONE"))
+            else PT:OpenOptions(); PT:SelectOptionsPage("maps") end
+        end
+        self:Attach()
+    end
 end
 events:SetScript("OnEvent",function(_,event,name)
     if event=="ADDON_LOADED" and name==addon then Maps:Initialize()
@@ -84,7 +96,7 @@ events:SetScript("OnEvent",function(_,event,name)
         if event=="PLAYER_REGEN_DISABLED" then
             if Maps.resizeGrip then
                 Maps.resizeGrip:SetScript("OnUpdate",nil)
-                Maps.dragBar:SetScript("OnUpdate",nil); Maps.moving=nil
+                Maps.moveDriver:SetScript("OnUpdate",nil); Maps.moving=nil; Maps.extraZoomScale=nil
             end
         elseif event=="ADDON_LOADED" then Maps:Attach()
         elseif event=="PLAYER_REGEN_ENABLED" or event=="DISPLAY_SIZE_CHANGED" then Maps:Refresh()

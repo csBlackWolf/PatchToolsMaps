@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 
 TABLES = ('WorldMapOverlay', 'WorldMapOverlayTile', 'UiMapArt',
-          'UiMapArtStyleLayer', 'UiMap', 'UiMapXMapArt')
+          'UiMapArtStyleLayer', 'UiMapXMapArt')
 
 
 def generate(tables):
@@ -72,6 +72,8 @@ def main():
     parser.add_argument('input', type=Path)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--build', type=int, required=True)
+    parser.add_argument('--skip-invalid-texture-geometry', action='store_true',
+                        help='Exclude overlays whose client images cannot cover their declared geometry')
     args = parser.parse_args()
     metadata = json.loads((args.input/'extraction-meta.json').read_text(encoding='utf-8'))
     if int(metadata['version'].split('.')[-1]) != args.build or not metadata['localOnly']:
@@ -84,19 +86,32 @@ def main():
     for layers in catalog.values():
         for layer_key, overlays in layers.items():
             _, _, _, tw, th = map(int, layer_key.split(':'))
-            for overlay in overlays:
+            for overlay in list(overlays):
                 cols = (overlay['textureWidth']+tw-1)//tw
+                overlay_ids, overlay_sizes = set(), {}
+                valid = True
                 for index, fdid in enumerate(overlay['fileDataIDs']):
                     w = min(tw, overlay['textureWidth']-(index%cols)*tw)
                     h = min(th, overlay['textureHeight']-(index//cols)*th)
                     pw, ph = max(16, 1 << (w-1).bit_length()), max(16, 1 << (h-1).bit_length())
                     actual = headers.get(fdid)
-                    if not actual or any(v < needed or v > 4096 or v & (v-1)
-                                         for v,needed in ((actual['width'],w),(actual['height'],h))):
-                        raise ValueError(f'Invalid texture dimensions for {fdid}: {actual}')
+                    if not actual:
+                        raise ValueError(f'Missing texture header for {fdid}')
+                    if any(v < needed or v > 4096 or v & (v-1)
+                           for v,needed in ((actual['width'],w),(actual['height'],h))):
+                        if not args.skip_invalid_texture_geometry:
+                            raise ValueError(f'Invalid texture dimensions for {fdid}: {actual}')
+                        valid = False
+                        break
                     if (actual['width'],actual['height']) != (pw,ph):
-                        sizes[fdid] = (actual['width'],actual['height'])
-                    verified_ids.add(fdid)
+                        overlay_sizes[fdid] = (actual['width'],actual['height'])
+                    overlay_ids.add(fdid)
+                if valid:
+                    sizes.update(overlay_sizes)
+                    verified_ids.update(overlay_ids)
+                else:
+                    overlays.remove(overlay)
+                    skipped['invalid_texture_geometry'] = skipped.get('invalid_texture_geometry', 0) + 1
     lines = ['local _, Maps = ...', '-- Generated from Blizzard client tables. Do not edit by hand.',
              'Maps.catalog = Maps.catalog or {}', f'Maps.catalog[{args.build}] = {{']
     count = 0

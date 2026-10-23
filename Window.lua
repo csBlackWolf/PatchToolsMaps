@@ -20,8 +20,8 @@ function Maps:ApplyWindow()
         map:ClearAllPoints()
         map:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",self.db.x*UIParent:GetWidth()*ratio,self.db.y*UIParent:GetHeight()*ratio)
     end
-    map:SetClampedToScreen(true)
-    self.dragBar:SetShown(self.db.movable)
+    map:SetClampedToScreen(false)
+    if self.ownsDragBar then self.dragBar:SetShown(self.db.movable) end
     self.resizeGrip:SetShown(self.db.resizable)
 end
 function Maps:ResetWindow()
@@ -31,86 +31,84 @@ function Maps:ResetWindow()
     local map=self.map
     map:SetScale(self.originalScale)
     map:ClearAllPoints()
-    for _,point in ipairs(self.originalPoints) do map:SetPoint(unpack(point)) end
+    if PatchTools and PatchTools.isClassicEra then
+        -- Era's native title drag can also move its persistent screen anchor.
+        -- Restore the native default even if that anchor was left off-screen.
+        if WorldMapScreenAnchor then
+            WorldMapScreenAnchor:ClearAllPoints()
+            WorldMapScreenAnchor:SetPoint("TOPLEFT",UIParent,"TOPLEFT",16,-104)
+        end
+        map:SetPoint("TOPLEFT",UIParent,"TOPLEFT",16,-104)
+    else
+        for _,point in ipairs(self.originalPoints) do map:SetPoint(unpack(point)) end
+    end
     self:ApplyWindow()
 end
 function Maps:ResetMap()
     self.closeAfterReset=self.map and self.map:IsShown() or nil
-    self.db.extendedZoom=false
+    self.extraZoomScale=nil
     self.zoomPending=true
     self.resetViewPending=true
     self.moving=nil
-    if self.dragBar then self.dragBar:SetScript("OnUpdate",nil) end
+    if self.moveDriver then self.moveDriver:SetScript("OnUpdate",nil) end
     if self.resizeGrip then self.resizeGrip:SetScript("OnUpdate",nil) end
     self:ResetWindow()
     self:Refresh()
-end
-function Maps:ExtendZoom(scroll)
-    -- Do not write Blizzard's zoomLevels: those records feed protected map pins.
-    -- Extra zoom remains unavailable until a taint-safe implementation is verified.
 end
 function Maps:InstallWindow(map)
     self.originalScale=map:GetScale()
     self.originalPoints={}
     for i=1,map:GetNumPoints() do self.originalPoints[i]={map:GetPoint(i)} end
-    local bar=CreateFrame("Button",nil,map)
+    local bar=WorldMapTitleButton
+    self.ownsDragBar=bar==nil
+    if not bar then
+        -- Invisible hit area on the existing header; no label or painted bar.
+        bar=CreateFrame("Button",nil,map)
+        bar:SetPoint("TOPLEFT",map,"TOPLEFT",80,-2)
+        bar:SetPoint("TOPRIGHT",map,"TOPRIGHT",-100,-2)
+        bar:SetHeight(19)
+        bar:RegisterForDrag("LeftButton")
+    end
     self.dragBar=bar
-    bar:Hide()
-    bar:SetPoint("TOPLEFT",map,"TOPLEFT",100,-2)
-    bar:SetPoint("TOPRIGHT",map,"TOPRIGHT",-100,-2)
-    bar:SetHeight(19)
-    bar:SetFrameLevel(map:GetFrameLevel()+10)
-    bar:RegisterForDrag("LeftButton")
-    local background=bar:CreateTexture(nil,"BACKGROUND")
-    background:SetAllPoints(); background:SetColorTexture(.04,.07,.09,.95)
-    local title=bar:CreateFontString(nil,"OVERLAY","GameFontHighlightSmall")
-    title:SetAllPoints(); title:SetText(self:T("DRAG"))
-    bar:SetScript("OnDragStart",function()
+    self.moveDriver=CreateFrame("Frame",nil,map)
+    local driver=self.moveDriver
+    local function Start()
         if not self:CanChangeWindow() or not self.db.movable then return end
+        if map.StopMovingOrSizing then map:StopMovingOrSizing() end
         self:SavePosition()
         local x,y=GetCursorPosition()
         local startX,startY=self.db.x,self.db.y
         if not startX or not startY then return end
         self.moving=true
-        bar:SetScript("OnUpdate",function()
-            if not self:CanChangeWindow() then bar:SetScript("OnUpdate",nil); self.moving=nil; return end
+        driver:SetScript("OnUpdate",function()
+            if not self:CanChangeWindow() then driver:SetScript("OnUpdate",nil); self.moving=nil; return end
             local cx,cy=GetCursorPosition()
             local scale=UIParent:GetEffectiveScale()
-            self.db.x=math.max(0,math.min(1,startX+(cx-x)/scale/UIParent:GetWidth()))
-            self.db.y=math.max(0,math.min(1,startY+(cy-y)/scale/UIParent:GetHeight()))
+            self.db.x=startX+(cx-x)/scale/UIParent:GetWidth()
+            self.db.y=startY+(cy-y)/scale/UIParent:GetHeight()
             self:ApplyWindow()
         end)
-    end)
+    end
+    bar:HookScript("OnDragStart",Start)
     local function Stop()
         if not self.moving then return end
         self.moving=nil
-        bar:SetScript("OnUpdate",nil)
+        driver:SetScript("OnUpdate",nil)
+        self:ApplyWindow()
     end
-    bar:SetScript("OnDragStop",Stop)
+    bar:HookScript("OnDragStop",Stop)
     local grip=CreateFrame("Button",nil,map)
     self.resizeGrip=grip
     grip:Hide()
-    grip:SetPoint("BOTTOMRIGHT",map,"BOTTOMRIGHT",12,-12)
-    grip:SetSize(24,24); grip:SetFrameLevel(map:GetFrameLevel()+10)
-    local border=grip:CreateTexture(nil,"BACKGROUND")
-    border:SetAllPoints(); border:SetColorTexture(.58,.43,.21,1)
-    local face=grip:CreateTexture(nil,"ARTWORK")
-    face:SetPoint("TOPLEFT",1,-1); face:SetPoint("BOTTOMRIGHT",-1,1)
-    face:SetColorTexture(.09,.075,.05,1)
-    local icon=grip:CreateTexture(nil,"OVERLAY")
-    icon:SetPoint("CENTER"); icon:SetSize(20,20)
-    icon:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
-    icon:SetVertexColor(.9,.8,.6)
+    grip:SetPoint("BOTTOMRIGHT",map,"BOTTOMRIGHT",2,-2)
+    grip:SetSize(20,20); grip:SetFrameLevel(map:GetFrameLevel()+10)
+    grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+    grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+    grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
     grip:SetScript("OnEnter",function()
-        border:SetColorTexture(.85,.68,.33,1)
-        face:SetColorTexture(.18,.14,.08,1)
         if GameTooltip then GameTooltip:SetOwner(grip,"ANCHOR_RIGHT"); GameTooltip:SetText(self:T("SIZE_DRAG")); GameTooltip:Show() end
     end)
-    grip:SetScript("OnLeave",function()
-        border:SetColorTexture(.58,.43,.21,1)
-        face:SetColorTexture(.09,.075,.05,1)
-        if GameTooltip then GameTooltip:Hide() end
-    end)
+    grip:SetScript("OnLeave",function() if GameTooltip then GameTooltip:Hide() end end)
     grip:SetScript("OnMouseDown",function(_,button)
         if button~="LeftButton" or not self:CanChangeWindow() or not self.db.resizable then return end
         self:SavePosition()
@@ -122,19 +120,19 @@ function Maps:InstallWindow(map)
             if not self:CanChangeWindow() then grip:SetScript("OnUpdate",nil); return end
             local cx,cy=GetCursorPosition()
             local delta=((cx-x)*width+(y-cy)*height)/(width*width+height*height)
-            self.db.scale=math.max(.6,math.min(1.5,start*(1+delta)))
+            self.db.scale=math.max(.6,start*(1+delta))
             self:ApplyWindow()
         end)
     end)
     grip:SetScript("OnMouseUp",function() grip:SetScript("OnUpdate",nil) end)
-    map:HookScript("OnHide",function() Stop(); grip:SetScript("OnUpdate",nil) end)
+    map:HookScript("OnHide",function() Stop(); self.extraZoomScale=nil; grip:SetScript("OnUpdate",nil) end)
     map:HookScript("OnShow",function()
         C_Timer.After(0,function() if map:IsShown() then self:Refresh() end end)
     end)
     for _,method in ipairs({"Maximize","Minimize"}) do
         if type(map[method])=="function" then hooksecurefunc(map,method,function()
             local maximized=map.IsMaximized and map:IsMaximized()
-            bar:SetShown(not maximized and self.db.movable)
+            if self.ownsDragBar then bar:SetShown(not maximized and self.db.movable) end
             grip:SetShown(not maximized and self.db.resizable)
             if maximized then
                 if not (InCombatLockdown and InCombatLockdown()) then map:SetScale(self.originalScale) end
@@ -142,6 +140,7 @@ function Maps:InstallWindow(map)
         end) end
     end
     local scroll=map.ScrollContainer
+    self:InstallZoom(scroll)
     if scroll and type(scroll.CreateZoomLevels)=="function" then
         hooksecurefunc(scroll,"CreateZoomLevels",function()
             self:RefreshReveal()

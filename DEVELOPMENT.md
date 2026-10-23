@@ -55,3 +55,10 @@ Mocks cover the optional/late load, settings page registration, defaults, visual
 ## License
 
 MIT. See LICENSE.txt. The bundled code is original; Blizzard textures are referenced from the game, not redistributed.
+
+
+## 0.2.0 client support and zoom
+
+Era 11509 and Forever 16001 share runtime code. XML-bound OnMouseWheel/OnMouseUp scripts are observed using HookScript; mouse-wheel input is explicitly enabled on the canvas. InstantPanAndZoom is invoked through securecallfunction outside combat. The addon never edits Blizzard zoomLevels or registers reveal textures in the shared native mask list. Enabled zoom spans the native minimum through four times its maximum and does not depend on the native wheel handler first reaching maximum.
+
+Era 70003 now has a separate generated catalog and CATALOG-MANIFEST-ERA.json. One inconsistent overlay is omitted; native display remains there. Defaults apply only to absent/invalid settings, preserving saved false values. Combat game checks passed in Era; the latest Forever gameplay retest is unavailable while Beta is closed.

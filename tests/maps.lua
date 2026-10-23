@@ -23,6 +23,9 @@ local function Widget(parent)
     function methods:GetPoint(i) return unpack(self.points[i]) end
     function methods:GetScale() return self.scale end
     function methods:SetScale(s) self.scale=s end
+    function methods:SetClampedToScreen(v) self.clamped=v end
+    function methods:EnableMouseWheel(v) self.wheelEnabled=v end
+    function methods:IsMouseWheelEnabled() return self.wheelEnabled==true end
     function methods:GetEffectiveScale() return self.scale end
     function methods:GetFrameLevel() return self.frameLevel end
     function methods:GetLeft() return 100 end
@@ -57,9 +60,15 @@ function CreateFrame(_,name,parent)
     return w
 end
 UIParent=Widget(); UIParent:SetSize(1920,1080)
-UISpecialFrames={}; tinsert=table.insert
+UISpecialFrames={}; SlashCmdList={}; tinsert=table.insert
 function GetLocale() return os.getenv('PATCHTOOLS_TEST_LOCALE') or 'enUS' end
-function GetBuildInfo() return '1.60.1','70532','',16001 end
+local era = os.getenv('PATCHTOOLS_TEST_CLIENT') == 'era'
+local build = era and 70003 or 70532
+local fixtureArt = era and 1194 or 2031
+function GetBuildInfo()
+    if era then return '1.15.9','70003','',11509 end
+    return '1.60.1','70532','',16001
+end
 function InCombatLockdown() return combat end
 function GetCursorPosition() return cursorX,cursorY end
 local panelCloses=0
@@ -91,6 +100,7 @@ function PT:Print(s) self.lastMessage=s end
 function PT:SetOption(k,v) self.db[k]=v end
 function PT:OpenOptions() self.options:Show() end
 local base=BASE_PATH or 'PatchTools-next/PatchTools/'
+assert(loadfile(base..'Client.lua'))('PatchTools',PT)
 assert(loadfile(base..'Locales.lua'))('PatchTools',PT)
 assert(loadfile(base..'Extensions.lua'))('PatchTools',PT)
 assert(loadfile(base..'Options.lua'))('PatchTools',PT)
@@ -103,11 +113,12 @@ local placeholder=PT.mapsPlaceholder
 PT:SelectOptionsPage('general')
 assert(PT:SelectOptionsPage('missing')==false and PT.optionPages.general:IsShown())
 local Maps={}
-for _,name in ipairs({'Locales.lua','OverlayData.lua','GeneratedCatalog.lua','Reveal.lua','Window.lua','Options.lua','Core.lua'}) do
+for _,name in ipairs({'Locales.lua','OverlayData.lua','GeneratedCatalog.lua','GeneratedCatalogEra.lua','Reveal.lua','Zoom.lua','Window.lua','Options.lua','Core.lua'}) do
     assert(loadfile(MAPS_PATH..name))('PatchToolsMaps',Maps)
 end
 Event('ADDON_LOADED','PatchToolsMaps')
 assert(Maps.initialized and Maps.db.mode=='mist' and PT.optionPages.maps)
+assert(Maps.db.extendedZoom==true,'new installations enable map zoom by default')
 assert(not PT.mapsPlaceholder and PT.optionPages.maps~=placeholder and not placeholder:IsShown())
 assert(PT.optionNavigation.maps.points[1][3]>PT.optionNavigation.about.points[1][3])
 assert(not PT:RegisterOptionsPage('maps','Duplicate',function() error('duplicate builder ran') end))
@@ -129,11 +140,19 @@ C_Map={GetMapArtID=function() return artID end,GetMapArtLayers=function() return
 C_MapExplorationInfo={GetExploredMapTextures=function() return explored end}
 local map=Widget(UIParent)
 WorldMapFrame=map
+local nativeDragCalls=0
+if era then
+    WorldMapTitleButton=Widget(map)
+    WorldMapScreenAnchor=Widget(UIParent)
+    WorldMapScreenAnchor:SetPoint('TOPLEFT',UIParent,'TOPLEFT',-9999,9999)
+    WorldMapTitleButton:SetScript('OnDragStart',function() nativeDragCalls=nativeDragCalls+1 end)
+    WorldMapTitleButton:SetScript('OnUpdate',function() end)
+end
 map.maximized=false
 map:SetPoint('CENTER',UIParent,'CENTER',0,0)
 function map:IsMaximized() return self.maximized end
-function map:Maximize() self.maximized=true end
-function map:Minimize() self.maximized=false end
+function map:Maximize() self.maximized=true; if WorldMapTitleButton then WorldMapTitleButton:Hide() end end
+function map:Minimize() self.maximized=false; if WorldMapTitleButton then WorldMapTitleButton:Show() end end
 function map:GetMapID() return 100 end
 local nativeMasks={}
 map.maskableTextures=nativeMasks
@@ -157,6 +176,19 @@ function scroll:GetCurrentLayerIndex()
     return self.zoomLevels[index].layerIndex
 end
 local nativeZoomBuilds=0
+function scroll:GetScaleForMaxZoom() return self.zoomLevels[#self.zoomLevels].scale end
+function scroll:GetCanvasScale() return rawget(self,'currentScale') or 1 end
+function scroll:GetNormalizedHorizontalScroll() return .5 end
+function scroll:GetNormalizedVerticalScroll() return .5 end
+function scroll:InstantPanAndZoom(scale,x,y)
+    assert(not combat)
+    self.currentScale,self.panX,self.panY=scale,x,y
+end
+function scroll:OnMouseWheel(delta)
+    if rawget(self,'overview') then return end
+    self.currentScale=delta>0 and self:GetScaleForMaxZoom() or self.zoomLevels[1].scale
+end
+
 function scroll:CreateZoomLevels()
     nativeZoomBuilds=nativeZoomBuilds+1
     self.zoomLevels=setmetatable({{scale=1,layerIndex=1},{scale=2,layerIndex=1}},
@@ -168,6 +200,13 @@ function scroll:ResetZoom(ignoreScaleRatio)
     self.panX,self.panY=.5,.5
     self.resets=(rawget(self,'resets') or 0)+1
 end
+-- XML binds the original handler before the addon is loaded. Real wheel
+-- input calls the registered script, not a later replacement of the method.
+scroll:SetScript('OnMouseWheel',scroll.OnMouseWheel)
+local function Wheel(delta)
+    if scroll:IsMouseWheelEnabled() then scroll.scripts.OnMouseWheel(scroll,delta) end
+end
+scroll.GetCursorPosition=false
 scroll:CreateZoomLevels()
 combat=true
 Event('ADDON_LOADED','Blizzard_WorldMap')
@@ -205,7 +244,7 @@ local special={textureWidth=300,textureHeight=200,offsetX=0,offsetY=0,fileDataID
 assert(#Maps:PlanOverlays({overlay},{special},layer,'full')==0)
 -- Independently generated client data works without a learned exploration cache.
 local catalogCount,artCount=0,0
-for art,layers in pairs(Maps.catalog[70532]) do
+for art,layers in pairs(Maps.catalog[build]) do
     artCount=artCount+1
     for key,overlays in pairs(layers) do
         local index,lw,lh,tw,th=key:match('^(%d+):(%d+):(%d+):(%d+):(%d+)$')
@@ -215,22 +254,30 @@ for art,layers in pairs(Maps.catalog[70532]) do
         end
     end
 end
-assert(artCount==45 and catalogCount==572)
+assert(artCount==(era and 41 or 45) and catalogCount==(era and 525 or 572))
 local oldLayer=layer
 layer={layerWidth=1002,layerHeight=668,tileWidth=256,tileHeight=256}
-artID=2031; Maps.db.knownOverlays={}; explored={}; Maps.db.mode='mist'
+artID=fixtureArt; Maps.db.knownOverlays={}; explored={}; Maps.db.mode='mist'
 Maps:RefreshReveal()
 assert(Maps.textures[1]:IsShown() and Maps.textures[1].alpha==.5 and #explored==0)
-assert(#Maps:GetCatalog(2031,1,layer)==15)
-explored=Maps:GetCatalog(2031,1,layer); Maps:RefreshReveal()
+assert(#Maps:GetCatalog(fixtureArt,1,layer)>0)
+if not era then assert(#Maps:GetCatalog(fixtureArt,1,layer)==15) end
+explored=Maps:GetCatalog(fixtureArt,1,layer); Maps:RefreshReveal()
 assert(not Maps.textures[1]:IsShown())
-assert(#Maps:GetCatalog(2031,2,layer)==0)
+assert(#Maps:GetCatalog(fixtureArt,2,layer)==0)
 local savedBuild=GetBuildInfo
 function GetBuildInfo() return '1.60.1','99999','',16001 end
-assert(#Maps:GetCatalog(2031,1,layer)==0)
+assert(#Maps:GetCatalog(fixtureArt,1,layer)==0)
 GetBuildInfo=savedBuild
-local fw,fh=Maps:TextureSize(8124659,237,9)
-assert(fw==256 and fh==32)
+if era then
+    local id,size=next(Maps.catalogTextureSizes[70003])
+    local fw,fh=Maps:TextureSize(id,1,1)
+    assert(fw==size[1] and fh==size[2])
+else
+    local fw,fh=Maps:TextureSize(8124659,237,9)
+    assert(fw==256 and fh==32)
+end
+if era then assert(not PT.optionPages.phase and not PT.optionNavigation.phase) end
 layer=oldLayer; artID=56; explored={}; Maps.db.knownOverlays={}
 -- Window scale, reset, fullscreen and combat deferral.
 Maps.db.scale=1.3; Maps:Refresh(); assert(map.scale==1.3)
@@ -243,30 +290,31 @@ Maps.dragBar.scripts.OnDragStart(); assert(Maps.moving)
 Maps.dragBar.scripts.OnDragStop(); assert(not Maps.moving and Maps.db.x and Maps.db.y)
 Maps.dragBar.scripts.OnDragStart()
 combat=true; Event('PLAYER_REGEN_DISABLED')
-assert(not Maps.moving and not Maps.dragBar.scripts.OnUpdate)
+assert(not Maps.moving and not Maps.moveDriver.scripts.OnUpdate)
 assert(Maps.dragBar:IsShown() and Maps.resizeGrip:IsShown())
 Maps.resizeGrip.scripts.OnMouseDown(Maps.resizeGrip,'LeftButton')
 assert(Maps.resizeGrip:IsShown() and not Maps.resizeGrip.scripts.OnUpdate)
 combat=false; Event('PLAYER_REGEN_ENABLED')
 Maps.resizeGrip.scripts.OnMouseDown(Maps.resizeGrip,'LeftButton')
 cursorX,cursorY=100000,-100000
-Maps.resizeGrip.scripts.OnUpdate(); assert(Maps.db.scale==1.5)
+Maps.resizeGrip.scripts.OnUpdate(); assert(Maps.db.scale>1.5)
 Maps.resizeGrip.scripts.OnMouseUp(); assert(not Maps.resizeGrip.scripts.OnUpdate)
 Maps:ResetWindow(); assert(map.scale==1 and Maps.db.x==nil and Maps.db.y==nil)
 -- Full reset is wired to the options button, including native view/zoom.
 local anchor=Maps.resizeGrip.points[1]
 assert(anchor[1]=='BOTTOMRIGHT' and anchor[2]==map and anchor[3]=='BOTTOMRIGHT')
-assert(anchor[4]==12 and anchor[5]==-12)
-assert(Maps.resizeGrip.width==24 and Maps.resizeGrip.height==24)
-assert(Maps.dragBar.height==19 and #Maps.dragBar.points==2)
+assert(anchor[4]==2 and anchor[5]==-2)
+assert(Maps.resizeGrip.width==20 and Maps.resizeGrip.height==20)
+if era then assert(Maps.dragBar==WorldMapTitleButton and not Maps.ownsDragBar and nativeDragCalls>0 and Maps.dragBar.scripts.OnUpdate)
+else assert(Maps.dragBar.height==19 and #Maps.dragBar.points==2) end
 Maps.db.extendedZoom=true; Maps.db.scale=1.4; Maps.db.x=.4; Maps.db.y=.6
 Maps:Refresh(true); scroll.currentScale=4; scroll.panX,scroll.panY=.9,.1
 Maps.optionsUI.reset.scripts.OnClick()
 assert(not map:IsShown() and panelCloses==1)
 assert(secureCalls>=2)
-assert(map.scale==1 and Maps.db.x==nil and Maps.db.y==nil and not Maps.db.extendedZoom)
+assert(map.scale==1 and Maps.db.x==nil and Maps.db.y==nil and Maps.db.extendedZoom)
 assert(#scroll.zoomLevels==2 and scroll.currentScale==1 and scroll.panX==.5 and scroll.panY==.5)
-assert(Maps.optionsUI.checks.extendedZoom.checked==false)
+assert(Maps.optionsUI.checks.extendedZoom.checked==true)
 map:Show()
 local resets=scroll.resets
 combat=true; Maps.db.extendedZoom=true; Maps.db.scale=1.2
@@ -285,7 +333,7 @@ assert(not map:IsShown() and panelCloses==closes)
 map:Show(); assert(not Maps.resetViewPending and not Maps.zoomPending)
 -- First-open/minimize/scale notifications can precede CreateZoomLevels.
 -- Both nil and empty tables must defer native layer queries and view reset.
-artID=2031; layer={layerWidth=1002,layerHeight=668,tileWidth=256,tileHeight=256}
+artID=fixtureArt; layer={layerWidth=1002,layerHeight=668,tileWidth=256,tileHeight=256}
 Maps.db.mode='mist'; Maps:RefreshReveal()
 assert(Maps.textures[1]:IsShown())
 scroll.zoomLevels=nil
@@ -302,3 +350,86 @@ assert(Maps.textures[1]:IsShown()) -- reopening rebuilds the native view and ove
 Maps:Refresh()
 assert(not Maps.resetViewPending and not Maps.zoomPending and scroll.currentScale==1)
 print('PASS: addon absent/late load, API registration, mist default, mode selection, overlay learning/rendering, texture tiling, art isolation, zoom limits, window controls, combat deferral and reset.')
+
+assert(map.clamped==false)
+map:Show(); Maps.db.movable=true; Maps.db.resizable=true
+Maps.dragBar.scripts.OnDragStart()
+cursorX,cursorY=-100000,100000
+Maps.moveDriver.scripts.OnUpdate()
+assert(Maps.db.x<0 and Maps.db.y>1)
+Maps.dragBar.scripts.OnDragStop()
+Maps.db.extendedZoom=true; Maps.extraZoomScale=nil; scroll.currentScale=2
+local levels=scroll.zoomLevels
+Wheel(1)
+assert(scroll.currentScale==2.5 and Maps.extraZoomScale==2.5)
+Wheel(1); assert(scroll.currentScale==3.125)
+Wheel(-1); assert(scroll.currentScale==2.5)
+Wheel(-1); assert(scroll.currentScale==2 and Maps.extraZoomScale==2)
+for i=1,20 do Wheel(1) end
+assert(scroll.currentScale==8 and scroll.zoomLevels==levels and #levels==2)
+combat=true; local secureBefore=secureCalls
+Wheel(1); assert(secureCalls==secureBefore and scroll.currentScale==2)
+SlashCmdList.PATCHTOOLSMAPS('reset')
+assert(Maps.resetPending and map:IsShown())
+combat=false; Event('PLAYER_REGEN_ENABLED')
+assert(not map:IsShown() and Maps.db.scale==1 and not Maps.db.x and not Maps.db.y)
+map:Show(); Maps.db.scale=5; Maps.db.x=-2; Maps.db.y=3; Maps:ApplyWindow()
+SlashCmdList.PATCHTOOLSMAPS('reset')
+assert(not map:IsShown() and Maps.db.scale==1 and not Maps.db.x and not Maps.db.y)
+-- World/continent overviews may have exactly one native scale and no
+-- native wheel zoom. The addon must receive the actual registered event.
+for _,overview in ipairs({'world','continent'}) do
+    scroll.overview=overview
+    scroll.zoomLevels=setmetatable({{scale=.75,layerIndex=1}},
+        {__newindex=function() error('native overview zoom levels must remain untouched') end})
+    scroll.currentScale=.75; Maps.extraZoomScale=nil; Maps.db.extendedZoom=true
+    Wheel(1); assert(scroll.currentScale==.9375)
+    Wheel(1); assert(scroll.currentScale==1.171875)
+    Wheel(-1); Wheel(-1); assert(scroll.currentScale==.75 and not Maps.extraZoomScale)
+    local original=scroll.zoomLevels
+    for i=1,20 do Wheel(1) end
+    assert(scroll.currentScale==3 and scroll.zoomLevels==original and #original==1)
+    scroll.scripts.OnMouseUp(scroll,'RightButton'); assert(not Maps.extraZoomScale)
+    Maps.db.extendedZoom=false; scroll.currentScale=.75
+    Wheel(1); assert(scroll.currentScale==.75)
+    Maps.db.extendedZoom=true; combat=true
+    Wheel(1); assert(scroll.currentScale==.75)
+    combat=false
+end
+scroll.overview=nil; scroll.zoomLevels=levels
+assert(scroll:IsMouseWheelEnabled() and Maps.zoomDiagnostics.calls>0)
+SlashCmdList.PATCHTOOLSMAPS('status')
+assert(PT.lastMessage:find('Wheel events=',1,true))
+print('PASS: XML-bound hardware wheel events drive zone, world and continent zoom; one-level native tables stay untouched.')
+print('PASS: extra wheel zoom without native zoom table mutation, native Era title reuse, unlimited resizing/off-screen dragging and slash reset with combat deferral.')
+if era then
+    local point=WorldMapScreenAnchor.points[1]
+    assert(point[1]=='TOPLEFT' and point[4]==16 and point[5]==-104)
+end
+-- Reproduce the live report: four native levels exist, wheel events arrive,
+-- but the displayed scale remains below their maximum. Extra zoom must not
+-- wait for the native handler to reach that maximum before doing anything.
+scroll.overview='reported-stalled-native'
+scroll.zoomLevels={
+    {scale=.57842313536926,layerIndex=1}, {scale=.8,layerIndex=1},
+    {scale=1,layerIndex=1}, {scale=1.2387226156132,layerIndex=1},
+}
+scroll.currentScale=.57842313536926
+Maps.extraZoomScale=nil; Maps.db.extendedZoom=true
+Wheel(1)
+assert(scroll.currentScale>.57842313536926,'enabled zoom must advance below the native maximum')
+local first=scroll.currentScale
+Wheel(1); assert(scroll.currentScale>first)
+Wheel(-1); assert(math.abs(scroll.currentScale-first)<.00001)
+for i=1,20 do Wheel(-1) end
+assert(math.abs(scroll.currentScale-.57842313536926)<.00001)
+scroll.overview=nil
+print('PASS: live-reported four-level map zoom advances from minimum even when native wheel zoom is stalled.')
+-- Reopening with an off-screen saved position must not sanitize it back on-screen.
+Maps.initialized=false
+Maps.db.scale=5; Maps.db.x=-2; Maps.db.y=3
+Maps:Initialize()
+assert(Maps.db.scale==5 and Maps.db.x==-2 and Maps.db.y==3)
+
+Maps.initialized=false; Maps.db.extendedZoom=false; Maps:Initialize()
+assert(Maps.db.extendedZoom==false,"preserve explicit saved zoom preference")

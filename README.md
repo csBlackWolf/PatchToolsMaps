@@ -1,6 +1,6 @@
 # PatchToolsMaps
 
-Optional world map tools for **World of Warcraft: Forever**, with built-in **English and German** language support. Made by **Patch & Zen**.
+Optional world map tools for **World of Warcraft: Forever and Classic Era**, with built-in **English and German** language support. Made by **Patch & Zen**.
 
 **Requires [PatchTools](https://www.curseforge.com/wow/addons/patchtools).** Adds a **Map** section to the PatchTools settings.
 
@@ -8,10 +8,10 @@ Optional world map tools for **World of Warcraft: Forever**, with built-in **Eng
 
 ## Features
 
-- Move the world map with a drag bar.
-- Resize it with a small square handle at the bottom-right corner.
+- Move the world map using its existing title bar, without an extra label covering other addons.
+- Resize it with a native-style bottom-right handle, without an upper size limit. Move it beyond screen edges if desired.
 - Save your preferred position and size between sessions.
-- Use the native mouse-wheel zoom. The extra zoom step is temporarily disabled for combat compatibility.
+- Extended mouse-wheel zoom is enabled by default for new settings; zoom for up to four times the native maximum outside combat. Native zoom remains available during combat.
 - Choose **Classic**, **Semi-transparent fog** (default), or **Fully revealed** for unexplored areas.
 - Reset position, size and zoom with one button. An open map closes so it can rebuild cleanly when reopened.
 
@@ -21,7 +21,7 @@ Reveal changes only the map display. It does not grant exploration, experience o
 
 **Requires PatchTools 0.7.0 or newer.** Install or update the base addon before enabling PatchToolsMaps. PatchTools 0.6.0 does not support this module.
 
-Currently tested on **Forever Beta 1.60.1, build 70532**. Other WoW editions and newer builds are not yet confirmed. Window movement, resizing and zoom have passed initial in-game checks.
+Tested in game on **Forever Beta 1.60.1, build 70532**. Classic Era **1.15.9, build 70003** has passed in-game checks for zoom on world, continent and zone views, and error-free combat behaviour. The updated zoom is covered by automated Forever checks but could not be retested in the closed Beta. Newer builds are not yet confirmed. Window movement, resizing and zoom have passed initial in-game checks.
 
 ## Installation
 
@@ -30,6 +30,7 @@ Install **PatchTools** and **PatchToolsMaps** together. For manual installation,
 ```text
 World of Warcraft/_forever_beta_/Interface/AddOns/PatchToolsMaps
 World of Warcraft/_forever_/Interface/AddOns/PatchToolsMaps
+World of Warcraft/_classic_era_/Interface/AddOns/PatchToolsMaps
 ```
 
 Some existing beta installations use `_classic_beta_` instead. Choose the folder used by your game. Do not put PatchToolsMaps inside the PatchTools folder.
@@ -37,9 +38,9 @@ Some existing beta installations use `_classic_beta_` instead. Choose the folder
 ## Controls and languages
 
 - Open **`/patchtools`**, then choose **Map** (German: **Karte**).
-- Drag the top bar to move the map; drag the square corner handle to resize it.
-- Use the mouse wheel to zoom.
-- Use **Reset map position, size and zoom** to restore the default view.
+- Drag the existing title bar to move the map; drag the corner handle to resize it.
+- Use the mouse wheel to zoom. **Extended map zoom** starts enabled for new settings; existing choices are preserved.
+- Use **Reset map position, size and zoom**, or **`/ptmaps reset`** (also **`/patchtoolsmaps reset`**), to restore the default view even if the map is off-screen.
 - English and German follow your game language; other languages use English.
 
 ## Reporting issues and suggesting features
@@ -51,6 +52,14 @@ Some existing beta installations use `_classic_beta_` instead. Choose the folder
 [MIT](LICENSE.txt). You may change and share the project while keeping the copyright and license notice.
 
 ## Changelog
+
+### 2026-10-23 — 0.2.0
+
+- Add Classic Era support with its own map catalog.
+- Enable map zoom by default for new settings, including world and continent views.
+- Remove the window size cap and screen-edge restriction.
+- Use the existing Era title bar and a native-style resize handle.
+- Add `/ptmaps reset` and `/ptmaps status`; preserve saved choices and combat safeguards.
 
 ### 2026-10-23 — 0.1.0
 

@@ -46,3 +46,10 @@ This writes `GeneratedCatalog.lua` and `CATALOG-MANIFEST.json`. Generation check
 The 19 header-size overrides in this build preserve the actual texture UV scale for narrow edges. They are derived from Blizzard image headers, not another addon's calculations.
 
 Do not label this as in-game verified until the map modes, exploration updates and interactions with other map addons have been checked in the live client.
+
+
+## Classic Era 70003
+
+The Era input uses the five tables needed for catalog geometry (UiMap is not used). Set MAPEXTRACT_LOCALE=deDE for the installed German content; the default enUS locale can select files that are not installed. Extraction remains local-only. An optional required-textures.json array limits header verification to accepted catalog IDs.
+
+Generate into a separate output directory with --build 70003 --skip-invalid-texture-geometry, then keep its Lua as GeneratedCatalogEra.lua and manifest as CATALOG-MANIFEST-ERA.json alongside the existing Forever files. The explicit skip flag quarantines one Era overlay (art 1264) whose declared bottom row is 33 pixels but whose two images are only 32 pixels high. Missing headers still fail generation. Catalog result: 525 overlays, 41 map arts, 808 verified textures, 42 size overrides. No third-party addon data or game images are included.

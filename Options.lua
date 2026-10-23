@@ -12,14 +12,13 @@ function Maps:BuildOptions(parent)
         box:SetPoint("TOPLEFT",0,y)
         local label=parent:CreateFontString(nil,"OVERLAY","GameFontNormal")
         label:SetPoint("LEFT",box,"RIGHT",4,0); label:SetWidth(530); label:SetJustifyH("LEFT"); label:SetText(self:T(text))
-        box:SetScript("OnClick",function(b) self.db[key]=b:GetChecked()==true; self:Refresh(true) end)
+        box:SetScript("OnClick",function(b) self.db[key]=b:GetChecked()==true; if key=="extendedZoom" then self:ZoomSettingsChanged() else self:Refresh() end end)
         checks[key]=box
     end
     Check("movable","MOVABLE",-45)
     Check("resizable","RESIZE",-82)
     Label(parent,self:T("WINDOW_HINT"),-126)
     Check("extendedZoom","ZOOM",-174)
-    checks.extendedZoom:Disable()
     Label(parent,self:T("ZOOM_HINT"),-215)
     Label(parent,self:T("MODE"),-257,"GameFontNormal")
     local modes={}
@@ -31,7 +30,7 @@ function Maps:BuildOptions(parent)
         modes[key]=button
     end
     Label(parent,self:T("VISUAL"),-393)
-    Label(parent,self:T("STATUS"),-425)
+    Label(parent,self:T("STATUS",tostring(select(2,GetBuildInfo()))),-425)
     local reset=CreateFrame("Button",nil,parent,"UIPanelButtonTemplate")
     reset:SetPoint("TOPLEFT",0,-487); reset:SetSize(350,27); reset:SetText(self:T("RESET"))
     local scale=Label(parent,"",-535)
@@ -43,7 +42,7 @@ end
 function Maps:UpdateOptions()
     local ui=self.optionsUI
     if not ui then return end
-    for key,box in pairs(ui.checks) do box:SetChecked(key~="extendedZoom" and self.db[key] or false) end
+    for key,box in pairs(ui.checks) do box:SetChecked(self.db[key]) end
     for mode,button in pairs(ui.modes) do if self.db.mode==mode then button:Disable() else button:Enable() end end
     ui.scale:SetText(self:T("SCALE",math.floor(self.db.scale*100+.5)))
 end

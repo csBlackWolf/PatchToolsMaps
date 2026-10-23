@@ -1,9 +1,9 @@
-## Interface: 16001
+## Interface: 11509, 16001
 ## Title: PatchToolsMaps
 ## Notes: Optional world map controls for PatchTools.
 ## Notes-deDE: Optionale Weltkartenfunktionen für PatchTools.
 ## Author: Patch & Zen
-## Version: 0.1.0
+## Version: 0.2.0
 ## X-License: MIT
 ## X-Curse-Project-ID: 1761299
 ## Dependencies: PatchTools
@@ -11,7 +11,9 @@
 Locales.lua
 OverlayData.lua
 GeneratedCatalog.lua
+GeneratedCatalogEra.lua
 Reveal.lua
+Zoom.lua
 Window.lua
 Options.lua
 Core.lua

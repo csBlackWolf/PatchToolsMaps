@@ -47,7 +47,7 @@ Some existing beta installations use `_classic_beta_` instead. Choose the folder
 
 [Open an issue](https://github.com/csBlackWolf/PatchToolsMaps/issues/new/choose) for a bug or an idea. Tell us what happened, what you expected, and your WoW, PatchTools and PatchToolsMaps versions. Screenshots and error messages help but are optional. Please leave out account details and private chat. English and German are welcome.
 
-Track progress through the issue labels: new, reviewed, planned, in progress and next release. [What each status means](.github/ISSUE_STATUS.md).
+Track progress through the issue labels: new, reviewed, planned, in progress, next release and deferred. [What each status means](.github/ISSUE_STATUS.md).
 
 ## License
 

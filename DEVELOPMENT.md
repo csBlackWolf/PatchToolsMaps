@@ -62,3 +62,7 @@ MIT. See LICENSE.txt. The bundled code is original; Blizzard textures are refere
 Era 11509 and Forever 16001 share runtime code. XML-bound OnMouseWheel/OnMouseUp scripts are observed using HookScript; mouse-wheel input is explicitly enabled on the canvas. InstantPanAndZoom is invoked through securecallfunction outside combat. The addon never edits Blizzard zoomLevels or registers reveal textures in the shared native mask list. Enabled zoom spans the native minimum through four times its maximum and does not depend on the native wheel handler first reaching maximum.
 
 Era 70003 now has a separate generated catalog and CATALOG-MANIFEST-ERA.json. One inconsistent overlay is omitted; native display remains there. Defaults apply only to absent/invalid settings, preserving saved false values. Combat game checks passed in Era; the latest Forever gameplay retest is unavailable while Beta is closed.
+
+## Required idea review before a build push
+
+Follow [the build planning rules](AGENTS.md). Review current GitHub ideas and the [shared board](https://github.com/users/csBlackWolf/projects/9), report accepted/planned items with counts, titles and links, and highlight the next-release items. List deferred ideas separately. Wait for confirmation before pushing a build or release, so another idea can still be included. This is a planning checkpoint, not automatic implementation of feature requests.

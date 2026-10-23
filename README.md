@@ -11,7 +11,7 @@ Optional world map tools for **World of Warcraft: Forever**, with built-in **Eng
 - Move the world map with a drag bar.
 - Resize it with a small square handle at the bottom-right corner.
 - Save your preferred position and size between sessions.
-- Enable an extra close zoom step.
+- Use the native mouse-wheel zoom. The extra zoom step is temporarily disabled while a combat-taint report is being checked.
 - Choose **Classic**, **Semi-transparent fog** (default), or **Fully revealed** for unexplored areas.
 - Reset position, size and zoom with one button. An open map closes so it can rebuild cleanly when reopened.
 
@@ -19,9 +19,9 @@ Reveal changes only the map display. It does not grant exploration, experience o
 
 ## Availability and requirements
 
-The first public alpha is being prepared. The development version requires **PatchTools 0.7.0 or a compatible preview**. The published PatchTools 0.6.0 does not yet support this module. Install matching versions of both addons when downloads become available.
+**Requires PatchTools 0.7.0 or newer.** Install or update the base addon before enabling PatchToolsMaps. PatchTools 0.6.0 does not support this module.
 
-Currently tested on **Forever Beta 1.60.1, build 70532**. Other WoW editions and newer builds are not yet confirmed. Window movement, resizing and zoom have passed an initial in-game test; the latest visual changes still need retesting.
+Currently tested on **Forever Beta 1.60.1, build 70532**. Other WoW editions and newer builds are not yet confirmed. Window movement, resizing and zoom have passed initial in-game checks.
 
 ## Installation
 
@@ -52,7 +52,13 @@ Some existing beta installations use `_classic_beta_` instead. Choose the folder
 
 ## Changelog
 
-### 2026-10-23 — Development preview 0.1.0-local.7
+### 2026-10-23 — Release preparation (local test 0.1.0-local.8)
+
+No release tag or downloadable CurseForge file has been published yet. A combat fix is undergoing in-game retesting.
+
+- Keep move/resize controls visible during combat; ignore drag attempts until combat ends.
+- Avoid modifying Blizzard's zoom table or registering addon textures in its shared mask list.
+- Temporarily disable the extra zoom step while checking the combat report.
 
 - Added optional map settings, movement, resizing and extended zoom.
 - Added three display modes for unexplored areas.

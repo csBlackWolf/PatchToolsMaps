@@ -19,6 +19,7 @@ function Maps:BuildOptions(parent)
     Check("resizable","RESIZE",-82)
     Label(parent,self:T("WINDOW_HINT"),-126)
     Check("extendedZoom","ZOOM",-174)
+    checks.extendedZoom:Disable()
     Label(parent,self:T("ZOOM_HINT"),-215)
     Label(parent,self:T("MODE"),-257,"GameFontNormal")
     local modes={}
@@ -42,7 +43,7 @@ end
 function Maps:UpdateOptions()
     local ui=self.optionsUI
     if not ui then return end
-    for key,box in pairs(ui.checks) do box:SetChecked(self.db[key]) end
+    for key,box in pairs(ui.checks) do box:SetChecked(key~="extendedZoom" and self.db[key] or false) end
     for mode,button in pairs(ui.modes) do if self.db.mode==mode then button:Disable() else button:Enable() end end
     ui.scale:SetText(self:T("SCALE",math.floor(self.db.scale*100+.5)))
 end

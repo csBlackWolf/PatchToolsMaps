@@ -2,9 +2,9 @@
 
 Optional map settings for **PatchTools**, with built-in English and German. Made by Patch & Zen.
 
-**Local development preview 0.1.0-local.7. Not published. Basic window controls passed an initial user test; the latest corner styling needs another in-game test.**
+**Developer notes for PatchToolsMaps 0.1.0.** Window movement, resizing and zoom passed initial in-game checks; automated tests cover loading, reveal modes and reset behaviour.
 
-Requires the prepared **PatchTools 0.7.0-local.1** (extension API 1). Published PatchTools 0.6.0 does not yet provide this interface. Without it, the addon prints an explanatory message and does not attach to the world map.
+Requires **PatchTools 0.7.0 or newer** (extension API 1). PatchTools 0.6.0 does not yet provide this interface. Without it, the addon prints an explanatory message and does not attach to the world map.
 
 ## Prepared features
 
@@ -49,8 +49,8 @@ Mocks cover the optional/late load, settings page registration, defaults, visual
 - Test dragging, scaling, map switching, zoom, full-screen transitions, combat and reloading with Questie/GatherMate2 enabled.
 - Test two characters with different exploration and confirm normal exploration progress is unchanged.
 - Verify generated coverage and special flags in the client; retain explicit exclusions for missing data.
-- Publish the compatible PatchTools update first; create a separate CurseForge project with a required PatchTools relationship.
-- Replace local versions with package-version placeholders and configure the new project's real ID only after it exists. Do not reuse PatchTools project ID 1758728 for this addon.
+- Release the compatible PatchTools base first. CurseForge project 1761299 requires PatchTools project 1758728.
+- Bump the module version in the TOC and Locales.lua together. Its CurseForge ID is 1761299; never reuse the base project ID.
 
 ## License
 

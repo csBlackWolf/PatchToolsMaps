@@ -1,9 +1,9 @@
 ## Interface: 16001
 ## Title: PatchToolsMaps
-## Notes: Optional map controls for PatchTools. Local development preview.
-## Notes-deDE: Optionale Kartenfunktionen für PatchTools. Lokale Entwicklungsvorschau.
+## Notes: Optional world map controls for PatchTools.
+## Notes-deDE: Optionale Weltkartenfunktionen für PatchTools.
 ## Author: Patch & Zen
-## Version: 0.1.0-local.7
+## Version: 0.1.0-local.8
 ## X-License: MIT
 ## X-Curse-Project-ID: 1761299
 ## Dependencies: PatchTools

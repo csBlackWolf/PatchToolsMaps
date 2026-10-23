@@ -44,6 +44,8 @@ local function Widget(parent)
     function methods:SetVertexColor(r,g,b) self.vertexColor={r,g,b} end
     function methods:SetAlpha(v) self.alpha=v end
     function methods:SetTexture(v) self.texture=v end
+    function methods:AddMaskTexture(v) self.mask=v end
+    function methods:RemoveMaskTexture(v) assert(self.mask==v); self.mask=nil end
     function methods:SetTexCoord(...) self.texCoord={...} end
     function methods:StartMoving() self.isMoving=true end
     function methods:StopMovingOrSizing() self.isMoving=false end
@@ -62,6 +64,12 @@ function InCombatLockdown() return combat end
 function GetCursorPosition() return cursorX,cursorY end
 local panelCloses=0
 function HideUIPanel(frame) panelCloses=panelCloses+1; frame:Hide() end
+local secureCalls=0
+function securecallfunction(fn,...)
+    assert(not combat,'native UI calls must wait for combat to end')
+    secureCalls=secureCalls+1
+    return fn(...)
+end
 function hooksecurefunc(object,key,fn)
     local original=object[key]
     object[key]=function(...)
@@ -86,9 +94,12 @@ local base=BASE_PATH or 'PatchTools-next/PatchTools/'
 assert(loadfile(base..'Locales.lua'))('PatchTools',PT)
 assert(loadfile(base..'Extensions.lua'))('PatchTools',PT)
 assert(loadfile(base..'Options.lua'))('PatchTools',PT)
--- The base addon has no map page while the optional addon is absent.
+-- Without the module, the Map entry offers installation and feature information.
 PT:CreateOptions()
-assert(not PT.optionPages.maps)
+assert(PT.optionPages.maps==PT.mapsPlaceholder)
+PT:SelectOptionsPage('maps'); assert(PT.mapsPlaceholder:IsShown())
+assert(PT.optionNavigation.maps.points[1][3]>PT.optionNavigation.about.points[1][3])
+local placeholder=PT.mapsPlaceholder
 PT:SelectOptionsPage('general')
 assert(PT:SelectOptionsPage('missing')==false and PT.optionPages.general:IsShown())
 local Maps={}
@@ -97,6 +108,8 @@ for _,name in ipairs({'Locales.lua','OverlayData.lua','GeneratedCatalog.lua','Re
 end
 Event('ADDON_LOADED','PatchToolsMaps')
 assert(Maps.initialized and Maps.db.mode=='mist' and PT.optionPages.maps)
+assert(not PT.mapsPlaceholder and PT.optionPages.maps~=placeholder and not placeholder:IsShown())
+assert(PT.optionNavigation.maps.points[1][3]>PT.optionNavigation.about.points[1][3])
 assert(not PT:RegisterOptionsPage('maps','Duplicate',function() error('duplicate builder ran') end))
 assert(not PT:RegisterOptionsPage('about','Reserved',function() end))
 assert(not Maps.map)
@@ -122,6 +135,14 @@ function map:IsMaximized() return self.maximized end
 function map:Maximize() self.maximized=true end
 function map:Minimize() self.maximized=false end
 function map:GetMapID() return 100 end
+local nativeMasks={}
+map.maskableTextures=nativeMasks
+local mask={}
+map.useMask=true
+function map:GetUseMaskTexture() return self.useMask end
+function map:GetMaskTexture() return mask end
+function map:RefreshMaskableTextures() end
+function map:AddMaskableTexture() error('addon texture must not enter Blizzard maskableTextures') end
 local canvas=Widget(map)
 local scroll=Widget(map)
 map.ScrollContainer=scroll
@@ -135,7 +156,12 @@ function scroll:GetCurrentLayerIndex()
     end
     return self.zoomLevels[index].layerIndex
 end
-function scroll:CreateZoomLevels() self.zoomLevels={{scale=1,layerIndex=1},{scale=2,layerIndex=1}} end
+local nativeZoomBuilds=0
+function scroll:CreateZoomLevels()
+    nativeZoomBuilds=nativeZoomBuilds+1
+    self.zoomLevels=setmetatable({{scale=1,layerIndex=1},{scale=2,layerIndex=1}},
+        {__newindex=function() error('addon must not mutate Blizzard zoomLevels') end})
+end
 function scroll:ResetZoom(ignoreScaleRatio)
     assert(ignoreScaleRatio==true)
     self.currentScale=self.zoomLevels[1].scale
@@ -143,11 +169,15 @@ function scroll:ResetZoom(ignoreScaleRatio)
     self.resets=(rawget(self,'resets') or 0)+1
 end
 scroll:CreateZoomLevels()
+combat=true
 Event('ADDON_LOADED','Blizzard_WorldMap')
+assert(not Maps.map,'late map attachment must wait until combat ends')
+combat=false
+Event('PLAYER_REGEN_ENABLED')
 assert(Maps.map==map and Maps.dragBar:IsShown() and Maps.resizeGrip:IsShown())
 Maps.db.extendedZoom=true; Maps:Refresh(true)
-assert(#scroll.zoomLevels==3 and scroll.zoomLevels[3].scale==4)
-scroll:CreateZoomLevels(); assert(#scroll.zoomLevels==3)
+assert(#scroll.zoomLevels==2 and nativeZoomBuilds==1)
+scroll:CreateZoomLevels(); assert(#scroll.zoomLevels==2)
 Maps.db.extendedZoom=false; Maps:Refresh(true); assert(#scroll.zoomLevels==2)
 -- The extra overlay renderer never changes the explored list.
 local overlay={textureWidth=300,textureHeight=200,offsetX=0,offsetY=0,fileDataIDs={111,222}}
@@ -157,6 +187,9 @@ assert(#explored==0 and #Maps.textures==2)
 assert(Maps.textures[1].alpha==.5 and Maps.textures[2].width==44)
 assert(not Maps.textures[1].desaturated and Maps.textures[1].vertexColor[1]==1)
 assert(Maps.textures[2].texCoord[2]==44/64)
+assert(Maps.textures[1].mask==mask and map.maskableTextures==nativeMasks and next(nativeMasks)==nil)
+map.useMask=false; map:RefreshMaskableTextures(); assert(rawget(Maps.textures[1],'mask')==nil)
+map.useMask=true; map:RefreshMaskableTextures(); assert(Maps.textures[1].mask==mask)
 Maps.db.mode='full'; Maps:RefreshReveal(); assert(Maps.textures[1].alpha==1)
 assert(not Maps.textures[1].desaturated and Maps.textures[1].vertexColor[1]==1)
 Maps.db.mode='classic'; Maps:RefreshReveal(); assert(not Maps.textures[1]:IsShown())
@@ -205,12 +238,15 @@ map:Maximize(); assert(map.scale==1 and not Maps.dragBar:IsShown())
 map:Minimize(); assert(map.scale==1.3 and Maps.dragBar:IsShown())
 combat=true; Maps.db.scale=.8; Maps:Refresh(); assert(map.scale==1.3)
 Maps.db.extendedZoom=true; Maps:Refresh(true); assert(#scroll.zoomLevels==2)
-combat=false; Event('PLAYER_REGEN_ENABLED'); assert(map.scale==.8 and #scroll.zoomLevels==3)
+combat=false; Event('PLAYER_REGEN_ENABLED'); assert(map.scale==.8 and #scroll.zoomLevels==2)
 Maps.dragBar.scripts.OnDragStart(); assert(Maps.moving)
 Maps.dragBar.scripts.OnDragStop(); assert(not Maps.moving and Maps.db.x and Maps.db.y)
 Maps.dragBar.scripts.OnDragStart()
 combat=true; Event('PLAYER_REGEN_DISABLED')
 assert(not Maps.moving and not Maps.dragBar.scripts.OnUpdate)
+assert(Maps.dragBar:IsShown() and Maps.resizeGrip:IsShown())
+Maps.resizeGrip.scripts.OnMouseDown(Maps.resizeGrip,'LeftButton')
+assert(Maps.resizeGrip:IsShown() and not Maps.resizeGrip.scripts.OnUpdate)
 combat=false; Event('PLAYER_REGEN_ENABLED')
 Maps.resizeGrip.scripts.OnMouseDown(Maps.resizeGrip,'LeftButton')
 cursorX,cursorY=100000,-100000
@@ -227,6 +263,7 @@ Maps.db.extendedZoom=true; Maps.db.scale=1.4; Maps.db.x=.4; Maps.db.y=.6
 Maps:Refresh(true); scroll.currentScale=4; scroll.panX,scroll.panY=.9,.1
 Maps.optionsUI.reset.scripts.OnClick()
 assert(not map:IsShown() and panelCloses==1)
+assert(secureCalls>=2)
 assert(map.scale==1 and Maps.db.x==nil and Maps.db.y==nil and not Maps.db.extendedZoom)
 assert(#scroll.zoomLevels==2 and scroll.currentScale==1 and scroll.panX==.5 and scroll.panY==.5)
 assert(Maps.optionsUI.checks.extendedZoom.checked==false)

@@ -46,11 +46,8 @@ function Maps:ResetMap()
     self:Refresh()
 end
 function Maps:ExtendZoom(scroll)
-    local levels=scroll.zoomLevels
-    if not self.db.extendedZoom or not levels or #levels==0 then return end
-    local last=levels[#levels]
-    if last.patchToolsMaps then return end
-    levels[#levels+1]={scale=last.scale*2,layerIndex=last.layerIndex,patchToolsMaps=true}
+    -- Do not write Blizzard's zoomLevels: those records feed protected map pins.
+    -- Extra zoom remains unavailable until a taint-safe implementation is verified.
 end
 function Maps:InstallWindow(map)
     self.originalScale=map:GetScale()
@@ -147,7 +144,6 @@ function Maps:InstallWindow(map)
     local scroll=map.ScrollContainer
     if scroll and type(scroll.CreateZoomLevels)=="function" then
         hooksecurefunc(scroll,"CreateZoomLevels",function()
-            self:ExtendZoom(scroll)
             self:RefreshReveal()
         end)
     end

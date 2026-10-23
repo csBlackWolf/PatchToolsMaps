@@ -14,6 +14,21 @@ end
 function Maps:ClearReveal()
     for _,texture in ipairs(self.textures or {}) do texture:Hide() end
 end
+function Maps:UpdateRevealMasks()
+    local map=self.map
+    if not map then return end
+    local mask
+    if map.GetMaskTexture and map.GetUseMaskTexture and map:GetUseMaskTexture() then mask=map:GetMaskTexture() end
+    self.textureMasks=self.textureMasks or {}
+    for _,texture in ipairs(self.textures or {}) do
+        local previous=self.textureMasks[texture]
+        if previous~=mask then
+            if previous then texture:RemoveMaskTexture(previous) end
+            if mask then texture:AddMaskTexture(mask) end
+            self.textureMasks[texture]=mask
+        end
+    end
+end
 function Maps:GetReadyLayerIndex()
     local container=self.map and self.map:GetCanvasContainer()
     -- Minimize/scale hooks also fire during Blizzard's first map setup.
@@ -69,7 +84,6 @@ function Maps:RefreshReveal()
             local texture=self.textures[textureIndex]
             if not texture then
                 texture=self.revealFrame:CreateTexture(nil,"ARTWORK")
-                map:AddMaskableTexture(texture)
                 self.textures[textureIndex]=texture
             end
             local width=math.min(layer.tileWidth,overlay.textureWidth-(col-1)*layer.tileWidth)
@@ -87,4 +101,5 @@ function Maps:RefreshReveal()
             texture:Show()
         end end
     end
+    self:UpdateRevealMasks()
 end

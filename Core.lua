@@ -10,34 +10,38 @@ function Maps:Refresh(rebuildZoom)
     if self.zoomPending and not (InCombatLockdown and InCombatLockdown()) and self.map:IsShown()
         and self.map.ScrollContainer and type(self.map.ScrollContainer.zoomLevels)=="table"
         and #self.map.ScrollContainer.zoomLevels>0 then
-        self.map.ScrollContainer:CreateZoomLevels()
-        self.map.ScrollContainer:RefreshCanvasScale()
         self.zoomPending=nil
     end
     if self.resetViewPending and not self.zoomPending and self:CanChangeWindow() and self.map:IsShown()
         and self:GetReadyLayerIndex() then
         local scroll=self.map.ScrollContainer
         if scroll and type(scroll.ResetZoom)=="function" then
-            scroll:ResetZoom(true)
+            if securecallfunction then securecallfunction(scroll.ResetZoom,scroll,true)
+            else scroll:ResetZoom(true) end
             self.resetViewPending=nil
         end
     end
     if self.closeAfterReset and not (InCombatLockdown and InCombatLockdown()) then
         self.closeAfterReset=nil
         if self.map:IsShown() then
-            if HideUIPanel then HideUIPanel(self.map) else self.map:Hide() end
+            if HideUIPanel then
+                if securecallfunction then securecallfunction(HideUIPanel,self.map) else HideUIPanel(self.map) end
+            else self.map:Hide() end
         end
     end
     self:RefreshReveal()
     self:UpdateOptions()
 end
 function Maps:Attach()
-    if self.map or not WorldMapFrame or not WorldMapFrame.GetCanvas then return end
+    if self.map or (InCombatLockdown and InCombatLockdown()) or not WorldMapFrame or not WorldMapFrame.GetCanvas then return end
     self.map=WorldMapFrame
     self:InstallWindow(self.map)
     local function Reveal() self:RefreshReveal() end
     for _,method in ipairs({"OnMapChanged","OnCanvasSizeChanged"}) do
         if type(self.map[method])=="function" then hooksecurefunc(self.map,method,Reveal) end
+    end
+    if type(self.map.RefreshMaskableTextures)=="function" then
+        hooksecurefunc(self.map,"RefreshMaskableTextures",function() self:UpdateRevealMasks() end)
     end
     if type(self.map.OnCanvasScaleChanged)=="function" then
         local lastLayer
@@ -79,8 +83,8 @@ events:SetScript("OnEvent",function(_,event,name)
     elseif Maps.initialized then
         if event=="PLAYER_REGEN_DISABLED" then
             if Maps.resizeGrip then
-                Maps.resizeGrip:SetScript("OnUpdate",nil); Maps.resizeGrip:Hide()
-                Maps.dragBar:SetScript("OnUpdate",nil); Maps.dragBar:Hide(); Maps.moving=nil
+                Maps.resizeGrip:SetScript("OnUpdate",nil)
+                Maps.dragBar:SetScript("OnUpdate",nil); Maps.moving=nil
             end
         elseif event=="ADDON_LOADED" then Maps:Attach()
         elseif event=="PLAYER_REGEN_ENABLED" or event=="DISPLAY_SIZE_CHANGED" then Maps:Refresh()

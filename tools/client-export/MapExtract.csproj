@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings>
+    <ReferenceRoot Condition="'$(ReferenceRoot)' == ''">../../../tools-reference</ReferenceRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(ReferenceRoot)/TACTSharp/TACTSharp/TACTSharp.csproj"/>
+    <ProjectReference Include="$(ReferenceRoot)/DBCD/DBCD/DBCD.csproj"/>
+  </ItemGroup>
+</Project>

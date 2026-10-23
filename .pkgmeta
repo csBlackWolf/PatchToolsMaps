@@ -1,0 +1,15 @@
+package-as: PatchToolsMaps
+enable-nolib-creation: no
+required-dependencies:
+  - patchtools
+ignore:
+  - .gitignore
+  - .gitattributes
+  - .pkgmeta
+  - README.md
+  - DEVELOPMENT.md
+  - .github
+  - tests
+  - tools
+  - RESEARCH.md
+  - CATALOG-MANIFEST.json

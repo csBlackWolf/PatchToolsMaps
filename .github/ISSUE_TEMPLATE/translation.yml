@@ -1,0 +1,30 @@
+name: Translation issue
+description: Report incorrect wording or propose a translation.
+title: "[Translation]: "
+body:
+  - type: input
+    id: language
+    attributes:
+      label: Language / client locale
+      placeholder: "German / deDE"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: PatchToolsMaps version
+    validations:
+      required: true
+  - type: textarea
+    id: original
+    attributes:
+      label: Current text and where it appears
+      description: "Include a screenshot or localization key if possible."
+    validations:
+      required: true
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Suggested translation and explanation
+    validations:
+      required: true

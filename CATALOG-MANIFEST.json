@@ -1,0 +1,43 @@
+{
+  "build": 70532,
+  "client": {
+    "version": "1.60.1.70532",
+    "product": "wow_classic_beta",
+    "buildConfig": "ad1802f4455e427ed8b7769aab25b0c0",
+    "cdnConfig": "ccc89ec4bcc03f6cc1cc1c7861d9ed0f",
+    "localOnly": true
+  },
+  "source": "Installed Blizzard client DB2 tables; DBCD JSON exports",
+  "map_art_count": 45,
+  "overlay_count": 572,
+  "skipped": {
+    "unused_art": 501,
+    "missing_tiles": 1,
+    "no_renderable_geometry": 7
+  },
+  "flags_policy": "Accept 0 and 4 observed in this build; reject other flags and player conditions. In-game verification pending.",
+  "verified_texture_count": 972,
+  "texture_size_overrides": 19,
+  "texture_headers_sha256": "d60e29fd20f4dd0e7444c2b75b681a2039bdb2e62fffff6c60e1e47e354c0774",
+  "sha256": {
+    "WorldMapOverlay.db2": "a73f74fcb458401c14faf6cc14dea299535f9a2572a2a23fb9fdc36b70cd1472",
+    "WorldMapOverlay.json": "d359d4ef19f2633111359e04ea21f6bab5ff6e1cadf955b0426e0c0ab0838663",
+    "definitions/WorldMapOverlay.dbd": "4fb4e500c42122eef5dde122091800a6b329f634d308ae7f92e1bdbde41cb694",
+    "WorldMapOverlayTile.db2": "05c91e40f637d8ab1192c1ad97d186aed193403dfa880a12264901a4198abe7e",
+    "WorldMapOverlayTile.json": "f224b5f4686d2eed0afb5275abd14c8eba25cbe506a62109c41ed2775181ed9d",
+    "definitions/WorldMapOverlayTile.dbd": "e91c52f4deea9ab664c971a72bc5f7fee51a8061e7c99de19cf3fde6692049e6",
+    "UiMapArt.db2": "050d39b84251dc7afd0490cbbb3e7f2a8d8fa1e0b4d0897372707255ab88fc8a",
+    "UiMapArt.json": "2e67c8645615f03093108a7184323e8b1871be3323be7730ec51bd6ee5b13e2f",
+    "definitions/UiMapArt.dbd": "7b43af2b7505c6f556a184b2558b80f2b9a20225cb2ade48f52089d6f27a73ef",
+    "UiMapArtStyleLayer.db2": "908a194774840d30725e8ac1335d8a47786bb3ba162ecae2a4dc39eebbe36c05",
+    "UiMapArtStyleLayer.json": "3b2f1a8bf710306a393766180471722551ffeeafda3eb5e3a346f1f1b78d182a",
+    "definitions/UiMapArtStyleLayer.dbd": "3a517ed97e15d9241d0b96aaa2cf5fb274358d21ddc9618c8f811684645d6a7c",
+    "UiMap.db2": "06a6cd6a84a725c508f77e4f5e60069f80c745a23cbbe15e9aed8c874e7008e0",
+    "UiMap.json": "4a97140c44a2c2beb84a9b82c2e9ba02db9fd8b1e95c68094143b702cb7066df",
+    "definitions/UiMap.dbd": "261b53f14f9d71eef5f7c65453793e3e43d0543769b62444099e8132fabc7dc3",
+    "UiMapXMapArt.db2": "863b9ec4649d5e4765f7e70c59ab5e3cc41f32018c03efeed38c12d6121c21bd",
+    "UiMapXMapArt.json": "0c46206b3692fdf7b3e734eabcfbff94293b2b74ffda0628c0888b5d7c4bc2f9",
+    "definitions/UiMapXMapArt.dbd": "1e191995d50b0d67788dd3eeee7f0404e0a53eafd356c84163263edc2a60e9b9"
+  },
+  "catalog_sha256": "fc94107dd2dbdd6ff0a3b0fb2cc7eb2a5b4719423830f34d2181039a3bf07b08"
+}

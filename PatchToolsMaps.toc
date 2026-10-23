@@ -1,0 +1,17 @@
+## Interface: 16001
+## Title: PatchToolsMaps
+## Notes: Optional map controls for PatchTools. Local development preview.
+## Notes-deDE: Optionale Kartenfunktionen für PatchTools. Lokale Entwicklungsvorschau.
+## Author: Patch & Zen
+## Version: 0.1.0-local.7
+## X-License: MIT
+## X-Curse-Project-ID: 1761299
+## Dependencies: PatchTools
+## SavedVariables: PatchToolsMapsDB
+Locales.lua
+OverlayData.lua
+GeneratedCatalog.lua
+Reveal.lua
+Window.lua
+Options.lua
+Core.lua

@@ -8,7 +8,7 @@ function Maps:UseCustomFrame()
         and not (self.map.IsMaximized and self.map:IsMaximized())
 end
 
-function Maps:GetCustomFrameInsets()
+function Maps:GetCustomFrameInsets(width)
     local bottom=24
     -- Reserve another row only when an addon actually registered fixed info.
     for _,entry in ipairs(self.frameWidgets or {}) do
@@ -16,11 +16,11 @@ function Maps:GetCustomFrameInsets()
             bottom=math.max(bottom,28+math.min(32,entry.frame:GetHeight()))
         end
     end
-    return 4,-36,-4,bottom+(self.novaRowHeight or 0)
+    return 4,-36-self:GetToolbarLayout(width).extraHeight,-4,bottom+(self.novaRowHeight or 0)
 end
 
 function Maps:GetCustomFrameHeight(width)
-    local left,top,right,bottom=self:GetCustomFrameInsets()
+    local left,top,right,bottom=self:GetCustomFrameInsets(width)
     local layers=C_Map.GetMapArtLayers(self.map:GetMapID())
     local art=layers and layers[1]
     local ratio=(self.originalHeight-50)/(self.originalWidth-30)
@@ -36,6 +36,35 @@ end
 local function Allowed(frame)
     return (type(frame)=="table" or type(frame)=="userdata") and type(frame.GetNumPoints)=="function"
         and not (type(frame.IsProtected)=="function" and frame:IsProtected())
+end
+function Maps:GetToolbarLayout(width)
+    width=width or self.map:GetWidth()
+    local available=math.max(24,width-18)
+    local layout={items={},total=0,extraHeight=0,rows=1}
+    for _,entry in ipairs(self.frameWidgets or {}) do
+        local widget=entry.frame
+        if entry.slot=="buttons" and Allowed(widget) and widget:IsShown() then
+            local scale=math.min(1,24/math.max(1,widget:GetHeight()),available/math.max(1,widget:GetWidth()))
+            local item={scale=scale,width=widget:GetWidth()*scale}
+            layout.items[entry]=item
+            layout.total=layout.total+item.width+3
+        end
+    end
+    layout.total=math.max(0,layout.total-3)
+    layout.stacked=layout.total>math.max(0,width-247)
+    local x,row=0,0
+    for _,entry in ipairs(self.frameWidgets or {}) do
+        local item=layout.items[entry]
+        if item then
+            if layout.stacked and x>0 and x+item.width>available then x=0; row=row+1 end
+            item.x,item.y=x,row*27
+            x=x+item.width+3
+        end
+    end
+    layout.rows=row+1
+    layout.width=math.max(1,math.min(layout.total,available))
+    if layout.stacked then layout.extraHeight=layout.rows*27 end
+    return layout
 end
 local function Snapshot(frame)
     local entry={frame=frame,parent=frame:GetParent(),points={},scale=frame:GetScale()}
@@ -100,11 +129,27 @@ function Maps:DiscoverDeathlogControl()
     -- only the world-map container, never that other checkbox or any heatmap pin.
     if not self.deathlogControl and Allowed(container) and Allowed(checkbox)
         and container:GetParent()==self.map:GetCanvas() and container.heatmap_checkbox==checkbox then
-        if self:RegisterFrameWidget("Deathlog.heatmap",container,"info-right") then
-            self.deathlogControl={container=container,checkbox=checkbox}
-        end
+        local control={container=container,checkbox=checkbox}
+        local broker=LibStub and LibStub("LibDataBroker-1.1",true)
+        local data=broker and broker:GetDataObjectByName("Deathlog")
+        local registered,button=self:RegisterMapAction("Deathlog.heatmap",{
+            icon=data and data.icon or "Interface\\TARGETINGFRAME\\UI-TargetingFrame-Skull",
+            tooltip=function()
+                return self:T("DEATHLOG_HEATMAP",self:T(checkbox:GetChecked() and "STATE_ON" or "STATE_OFF"))
+            end,
+            isShown=function() return container:IsShown() and checkbox:IsShown() end,
+            isActive=function() return checkbox:GetChecked()==true end,
+            onClick=function(_,mouseButton)
+                if mouseButton~="LeftButton" or (InCombatLockdown and InCombatLockdown()) then return end
+                -- Run Deathlog's current handler; it owns the setting and refresh.
+                local click=checkbox:GetScript("OnClick")
+                if click then click(checkbox,"LeftButton") end
+            end,
+        })
+        if registered then control.button=button; self.deathlogControl=control end
     end
     self:LayoutDeathlogControl(self:UseCustomFrame())
+    self:UpdateMapActions()
 end
 
 function Maps:LayoutDeathlogControl(enabled)
@@ -113,18 +158,13 @@ function Maps:LayoutDeathlogControl(enabled)
     local container,checkbox=control.container,control.checkbox
     if enabled then
         if not control.original then
-            control.original=Snapshot(checkbox)
-            control.width,control.height=container:GetSize()
+            control.original={alpha=container:GetAlpha(),mouse=checkbox:IsMouseEnabled()}
         end
-        local label=checkbox.label
-        local width=label and label.GetStringWidth and label:GetStringWidth()
-        if type(width)~="number" then width=120 end
-        container:SetSize(checkbox:GetWidth()+width+8,24)
-        checkbox:ClearAllPoints()
-        checkbox:SetPoint("LEFT",container,"LEFT",0,0)
+        -- Keep Deathlog's native anchors, parent and Show/Hide state untouched.
+        container:SetAlpha(0); checkbox:EnableMouse(false)
     elseif control.original then
-        Restore(control.original); control.original=nil
-        container:SetSize(control.width,control.height)
+        container:SetAlpha(control.original.alpha); checkbox:EnableMouse(control.original.mouse)
+        control.original=nil
     end
 end
 
@@ -177,7 +217,8 @@ function Maps:InstallCustomFrame(map)
         if elapsedTotal<.15 then return end
         elapsedTotal=0
         self:UpdateFrameCoordinates()
-        if self:UpdateNovaTimers() then self:Refresh() end
+        local actionsChanged=self:UpdateMapActions()
+        if self:UpdateNovaTimers() or actionsChanged then self:Refresh() end
     end)
 end
 
@@ -210,6 +251,7 @@ function Maps:LayoutCustomFrame()
     self.layingOutFrame=true
     local enabled=self:UseCustomFrame()
     self:LayoutDeathlogControl(enabled)
+    self:UpdateMapActions()
     self:UpdateNovaTimers()
     self.customFrame:SetShown(enabled)
     for _,entry in ipairs(self.frameArt) do entry.region:SetAlpha(enabled and 0 or entry.alpha) end
@@ -227,31 +269,32 @@ function Maps:LayoutCustomFrame()
         end
         self.customControlsPlaced=nil
     end
-    local dockWidth=0
+    local toolbar=self:GetToolbarLayout()
     if enabled then
         local _,_,_,bottom=self:GetCustomFrameInsets()
         self.customFrame.footer:SetHeight(bottom-10)
-        for _,entry in ipairs(self.frameWidgets or {}) do
-            if entry.slot=="buttons" and Allowed(entry.frame) and entry.frame:IsShown() then
-                local scale=math.min(1,24/math.max(1,entry.frame:GetHeight()))
-                dockWidth=dockWidth+entry.frame:GetWidth()*scale+3
-            end
-        end
-        self.customFrame.buttons:SetWidth(math.max(1,dockWidth-3))
+        local dock=self.customFrame.buttons
+        dock:ClearAllPoints()
+        dock:SetPoint("TOPRIGHT",self.map,"TOPRIGHT",toolbar.stacked and -9 or -70,toolbar.stacked and -30 or -4)
+        dock:SetSize(toolbar.width,toolbar.rows*27)
+        self.customHeader:ClearAllPoints()
+        self.customHeader:SetPoint("TOPLEFT",self.customFrame,"TOPLEFT",9,-4)
+        if toolbar.stacked then self.customHeader:SetPoint("TOPRIGHT",self.map,"TOPRIGHT",-70,-4)
+        else self.customHeader:SetPoint("TOPRIGHT",dock,"TOPLEFT",-8,0) end
     end
-    local index,left,right=0,0,0
+    local left,right=0,0
     for _,entry in ipairs(self.frameWidgets or {}) do
         if Allowed(entry.frame) then
             if enabled then
                 entry.original=entry.original or Snapshot(entry.frame)
                 local widget=entry.frame
-                local scale=entry.slot=="buttons" and math.min(1,24/math.max(1,widget:GetHeight())) or 1
+                local item=toolbar.items[entry]
+                local scale=item and item.scale or 1
                 widget:SetScale(scale)
                 widget:SetParent(entry.slot=="buttons" and self.customFrame.buttons or self.customFrame.footer)
                 widget:ClearAllPoints()
                 if entry.slot=="buttons" then
-                    widget:SetPoint("LEFT",self.customFrame.buttons,"LEFT",index/scale,0)
-                    if widget:IsShown() then index=index+widget:GetWidth()*scale+3 end
+                    widget:SetPoint("TOPLEFT",self.customFrame.buttons,"TOPLEFT",item and item.x/scale or 0,item and -item.y/scale or 0)
                 elseif entry.slot=="info-left" then
                     widget:SetPoint("BOTTOMLEFT",self.customFrame.footer,"BOTTOMLEFT",left,self.novaRowHeight or 0)
                     if widget:IsShown() then left=left+widget:GetWidth()+8 end

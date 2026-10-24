@@ -1,7 +1,8 @@
 local _, Maps = ...
 _G.PatchToolsMaps = Maps
-Maps.version = "0.3.0-alpha.7"
+Maps.version = "0.3.0-alpha.8"
 local en = {
+    STATE_ON="On", STATE_OFF="Off", DEATHLOG_HEATMAP="Deathlog · Heatmap: %s\nClick to toggle the heatmap.",
     TRANSPARENCY="Map transparency (both frames): %d%%",
     FRAME_CLASSIC_OPTION="Use the classic map frame", FRAME_CLASSIC_HINT="Unchecked: modern frame (default).",
     FRAME_COORDS="Player: %s    |    Cursor: %s",
@@ -20,6 +21,7 @@ local en = {
     COMBAT="Map window changes are deferred until combat ends.",
 }
 local de = {
+    STATE_ON="Ein", STATE_OFF="Aus", DEATHLOG_HEATMAP="Deathlog · Heatmap: %s\nKlicken, um die Heatmap umzuschalten.",
     TRANSPARENCY="Kartentransparenz (beide Rahmen): %d%%",
     FRAME_CLASSIC_OPTION="Klassischen Kartenrahmen verwenden", FRAME_CLASSIC_HINT="Ausgeschaltet: moderner Rahmen (Standard).",
     FRAME_COORDS="Spieler: %s    |    Maus: %s",

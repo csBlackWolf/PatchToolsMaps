@@ -1,6 +1,6 @@
 # Custom map frame alpha
 
-Version: 0.3.0-alpha.7. Branch: alpha/custom-map-frame. Based on stable 0.2.1.
+Version: 0.3.0-alpha.8. Branch: alpha/custom-map-frame. Based on stable 0.2.1.
 
 This is an experimental Classic Era frame. Forever keeps its native layout until a separate in-game test is possible. No stable release tag is changed.
 
@@ -15,7 +15,7 @@ The dark frame has a single compact title/button header and a one-line coordinat
 - Questie, ATT and HandyNotes MapNotes Classic Era: adopt existing buttons from the installed Krowi WorldMapButtons library. Their click and tooltip handlers and enabled/disabled settings are preserved. Blizzard's own overlay buttons are excluded.
 - SilverDragon: adopt the existing world-map button from its LDB module, including its icon visibility menu.
 - Nova World Buffs: mirror its existing city/world-buff marker icons and live timer text in a compact footer row outside the map. Nova controls which markers are shown for the current map, faction, layer and settings. Unknown timers remain unknown. Mask the original icon/timer/hint cluster without changing its anchors, parent, data provider or Show/Hide state, so Nova continues updating it. Restore alpha and mouse interaction when disabling the custom frame or using full-screen. Other geographic Nova markers (for example Felwood plants) are unchanged. Hovering a footer buff icon shows the complete wrapped /buffs hint; clicking forwards its existing Nova action.
-- Deathlog: dock the original world-map heatmap checkbox and its label in the footer, preserving its click handlers and visibility setting. Restore its original placement in Classic/fullscreen. The heatmap stays on the map.
+- Deathlog: use its minimap skull icon in the header to toggle the existing heatmap handler. The original checkbox and label are masked, with their visibility preference and anchors untouched; Classic/fullscreen restores them. No footer row is reserved. The heatmap stays on the map.
 - TomTom: leave waypoint and click handling intact. The footer provides player/cursor coordinates itself; it does not overwrite TomTom settings or fonts.
 - Fixed widgets from other addons may use the API below. Unknown widgets are not automatically grabbed from the map.
 

@@ -1,3 +1,12 @@
+# PatchToolsMaps 0.3.0-alpha.8 — 2026-10-25
+
+- Replace the Deathlog footer checkbox with its minimap skull icon in the header. Click to toggle the original heatmap function; icon and tooltip show the current state. Restore the native checkbox in Classic/fullscreen and keep its own visibility preference.
+- Offer the simple RegisterMapAction API as the preferred integration for addon toggles. Developers supply an icon, tooltip and callback, with optional active/visibility getters.
+- Give the area name its own row when icons need more room; wrap long toolbars into further rows without covering map art.
+- Expand INTEGRATION.md with the recommended icon approach and working examples.
+
+Validation: Era/Forever syntax and integration fixtures in English, German and English fallback include Deathlog toggling/state/restoration/combat, action registration and wrapping with 30 extra actions. In-game confirmation pending.
+
 # PatchToolsMaps 0.3.0-alpha.7 — 2026-10-25
 
 - Add map transparency using Blizzard's worldMapOpacity setting for both Classic and Modern. External native-setting changes update the slider; fullscreen retains Blizzard's opaque behavior. Clients without the native setting use a local fallback.

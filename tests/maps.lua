@@ -142,7 +142,7 @@ PT:SelectOptionsPage('general')
 assert(PT:SelectOptionsPage('missing')==false and PT.optionPages.general:IsShown())
 PatchToolsMapsDB={customFrame=false}
 local Maps={}
-for _,name in ipairs({'Locales.lua','OverlayData.lua','GeneratedCatalog.lua','GeneratedCatalogEra.lua','Reveal.lua','Zoom.lua','Nova.lua','Opacity.lua','Frame.lua','Window.lua','Options.lua','Core.lua'}) do
+for _,name in ipairs({'Locales.lua','OverlayData.lua','GeneratedCatalog.lua','GeneratedCatalogEra.lua','Reveal.lua','Zoom.lua','Nova.lua','Opacity.lua','Frame.lua','Actions.lua','Window.lua','Options.lua','Core.lua'}) do
     assert(loadfile(MAPS_PATH..name))('PatchToolsMaps',Maps)
 end
 Event('ADDON_LOADED','PatchToolsMaps')
@@ -913,33 +913,72 @@ end
 print('PASS: shared native map opacity, external CVar edits, fullscreen policy, combat deferral and clients without native opacity helpers.')
 
 if era then
-    local container=Widget(canvas); container:SetSize(40,40)
+    local container=Widget(canvas); container:SetSize(40,40); container:SetAlpha(.8)
     local checkbox=Widget(container); checkbox:SetSize(24,24); checkbox:SetPoint('TOPLEFT',100,-50)
+    checkbox:EnableMouse(true); checkbox:SetChecked(true)
     checkbox.label=Widget(container); checkbox.label:SetPoint('LEFT',checkbox,'RIGHT',0,0)
-    function checkbox.label:GetStringWidth() return 150 end
     container.heatmap_checkbox=checkbox; DeathlogHeatmapCheckbox=checkbox
     local clicked=0
-    checkbox:SetScript('OnClick',function() clicked=clicked+1 end)
+    checkbox:SetScript('OnClick',function()
+        clicked=clicked+1; checkbox:SetChecked(not checkbox:GetChecked())
+        container:SetParent(canvas) -- As Deathlog's own applySettings does.
+    end)
     local handler=checkbox.scripts.OnClick
     Maps.db.customFrame=true; Maps:Refresh()
-    assert(container:GetParent()==Maps.customFrame.footer and container:GetWidth()==182)
+    local action=Maps.deathlogControl.button
+    assert(action:GetParent()==Maps.customFrame.buttons and action:IsShown())
+    assert(container:GetParent()==canvas and container:GetWidth()==40 and container:GetAlpha()==0)
     assert(checkbox:GetParent()==container and checkbox.label:GetParent()==container)
-    assert(checkbox.points[1][1]=='LEFT' and checkbox.scripts.OnClick==handler)
-    checkbox.scripts.OnClick(); assert(clicked==1)
-    container:Hide(); Maps:Refresh(); assert(not container:IsShown(),'keep Deathlog visibility preference')
-    container:Show()
+    assert(checkbox.points[1][1]=='TOPLEFT' and checkbox.scripts.OnClick==handler and not checkbox:IsMouseEnabled())
+    action.scripts.OnClick(action,'LeftButton')
+    assert(clicked==1 and not checkbox:GetChecked() and action.icon.desaturated)
+    action.scripts.OnClick(action,'RightButton'); assert(clicked==1)
+    GameTooltip=Widget(UIParent)
+    action.scripts.OnEnter(); assert(GameTooltip.text:find(Maps:T('STATE_OFF'),1,true))
+    container:Hide(); Maps:Refresh(); assert(not action:IsShown(),'respect Deathlog checkbox visibility preference')
+    container:Show(); Maps:Refresh(); assert(action:IsShown())
     local stats=Widget(UIParent); DeathlogHeatmapCheckbox=Widget(stats)
-    Maps:Refresh(); assert(Maps.deathlogControl.checkbox==checkbox,'ignore duplicate name in Deathlog statistics window')
-    combat=true; Maps.db.customFrame=false; Maps:Refresh()
-    assert(container:GetParent()==Maps.customFrame.footer)
+    Maps:Refresh(); assert(Maps.deathlogControl.checkbox==checkbox,'ignore statistics-window checkbox')
+    combat=true; action.scripts.OnClick(action,'LeftButton'); assert(clicked==1,'defer native toggle in combat')
+    Maps.db.customFrame=false; Maps:Refresh(); assert(container:GetAlpha()==0)
     combat=false; Event('PLAYER_REGEN_ENABLED')
-    assert(container:GetParent()==canvas and container:GetWidth()==40 and container:GetHeight()==40)
-    assert(checkbox.points[1][1]=='TOPLEFT' and checkbox.points[1][2]==100 and checkbox.points[1][3]==-50)
-    assert(checkbox.scripts.OnClick==handler)
+    assert(container:GetParent()==canvas and container:GetAlpha()==.8 and checkbox:IsMouseEnabled())
+    assert(not action:IsShown() and checkbox.scripts.OnClick==handler)
     Maps.db.customFrame=true; Maps:Refresh(); map:Maximize()
-    assert(container:GetParent()==canvas and container:GetWidth()==40)
-    map:Minimize(); assert(container:GetParent()==Maps.customFrame.footer)
-    Maps.db.customFrame=false; Maps:Refresh()
-    DeathlogHeatmapCheckbox=nil
-    print('PASS: Deathlog checkbox and label dock together, retain native callbacks/visibility, ignore statistics checkbox, restore on Classic/fullscreen and defer combat changes.')
+    assert(container:GetAlpha()==.8 and not action:IsShown())
+    map:Minimize(); assert(container:GetAlpha()==0 and action:IsShown())
+    Maps.db.customFrame=false; Maps:Refresh(); DeathlogHeatmapCheckbox=nil
+    print('PASS: Deathlog header icon toggles the original handler, mirrors active/visible state, keeps native anchors untouched and restores Classic/fullscreen behavior.')
+
+    -- Simple action registrations and automatic toolbar overflow.
+    Maps.db.customFrame=true
+    local oldWidgets=#Maps.frameWidgets
+    local clicks,visible,active=0,true,false
+    local ok,button=Maps:RegisterMapAction('Test.simple',{
+        icon=134400,tooltip='Test action',isActive=function() return active end,
+        isShown=function() return visible end,onClick=function() clicks=clicks+1; active=not active end})
+    assert(ok and not Maps:RegisterMapAction('Test.simple',{icon=134400,onClick=function() end}))
+    assert(not Maps:RegisterMapAction('Invalid',{icon=134400}))
+    Maps:Refresh(); button.scripts.OnClick(button,'LeftButton')
+    assert(clicks==1 and not button.icon.desaturated)
+    visible=false; Maps:Refresh(); assert(not button:IsShown())
+    for i=1,30 do assert(Maps:RegisterMapAction('Test.extra'..i,{icon=134400,onClick=function() end})) end
+    Maps:Refresh()
+    local toolbar=Maps:GetToolbarLayout(500)
+    assert(toolbar.stacked and toolbar.rows>1 and toolbar.extraHeight==toolbar.rows*27)
+    for _,item in pairs(toolbar.items) do assert(item.x+item.width<=482+.00001) end
+    local _,top=Maps:GetCustomFrameInsets(500); assert(top==-36-toolbar.extraHeight)
+    local previousScale=Maps.db.scale
+    for _,factor in ipairs({.6,1,2}) do
+        Maps.db.scale=factor; Maps:Refresh()
+        assert(math.abs(map:GetHeight()-Maps:GetCustomFrameHeight(map:GetWidth()))<.00001,
+            'toolbar row changes must preserve the map viewport aspect ratio while resizing')
+    end
+    Maps.db.scale=previousScale
+    -- Remove fixture-only registrations, preserving the live adapters.
+    for i=#Maps.frameWidgets,oldWidgets+1,-1 do
+        local entry=table.remove(Maps.frameWidgets,i); entry.frame:Hide(); Maps.mapActions[entry.id]=nil
+    end
+    Maps:Refresh(); assert(not Maps:GetToolbarLayout(2000).stacked)
+    print('PASS: simple icon action API, click/state/visibility updates, duplicate validation and title-above-toolbar wrapping without horizontal overflow.')
 end

@@ -4,7 +4,7 @@
 ## Notes: Optional world map controls for PatchTools.
 ## Notes-deDE: Optionale Weltkartenfunktionen für PatchTools.
 ## Author: Patch & Zen
-## Version: 0.3.0-alpha.6
+## Version: 0.3.0-alpha.7
 ## X-License: MIT
 ## X-Curse-Project-ID: 1761299
 ## Dependencies: PatchTools
@@ -16,6 +16,7 @@ GeneratedCatalogEra.lua
 Reveal.lua
 Zoom.lua
 Nova.lua
+Opacity.lua
 Frame.lua
 Window.lua
 Options.lua

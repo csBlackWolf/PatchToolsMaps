@@ -302,6 +302,7 @@ function Maps:InstallWindow(map)
                         self.viewportRebuildPending=nil
                     end
                     if self.customFrame then self:LayoutCustomFrame() end
+                    self:ApplyMapOpacity()
                 end
             else self:Refresh() end
         end) end

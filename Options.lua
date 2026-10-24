@@ -21,14 +21,14 @@ function Maps:BuildOptions(parent)
         end)
         checks[key]=box
     end
-    Check("movable","MOVABLE",-45)
-    Check("resizable","RESIZE",-82)
-    Label(parent,self:T("WINDOW_HINT"),-126)
-    Check("extendedZoom","ZOOM",-174)
-    Label(parent,self:T("ZOOM_HINT"),-215)
-    Label(parent,self:T("MODE"),-257,"GameFontNormal")
+    Check("movable","MOVABLE",-35)
+    Check("resizable","RESIZE",-70)
+    Label(parent,self:T("WINDOW_HINT"),-111)
+    Check("extendedZoom","ZOOM",-158)
+    Label(parent,self:T("ZOOM_HINT"),-199)
+    Label(parent,self:T("MODE"),-240,"GameFontNormal")
     local mode=CreateFrame("Frame","PatchToolsMapsRevealDropdown",parent,"UIDropDownMenuTemplate")
-    mode:SetPoint("TOPLEFT",-16,-280)
+    mode:SetPoint("TOPLEFT",-16,-264)
     UIDropDownMenu_SetWidth(mode,350)
     local modes={{"classic","CLASSIC"},{"mist","MIST"},{"full","FULL"}}
     UIDropDownMenu_Initialize(mode,function(_,level)
@@ -41,17 +41,25 @@ function Maps:BuildOptions(parent)
             UIDropDownMenu_AddButton(info,level)
         end
     end)
-    Label(parent,self:T("VISUAL"),-333)
+    Label(parent,self:T("VISUAL"),-310)
     if PatchTools.isClassicEra then
-        Check("customFrame","FRAME_CLASSIC_OPTION",-370,true)
-        Label(parent,self:T("FRAME_CLASSIC_HINT"),-411)
+        Check("customFrame","FRAME_CLASSIC_OPTION",-339,true)
+        Label(parent,self:T("FRAME_CLASSIC_HINT"),-380)
     end
-    Label(parent,self:T("STATUS",tostring(select(2,GetBuildInfo()))),-447)
+    local opacityText=Label(parent,"",-411,"GameFontNormal")
+    local opacity=CreateFrame("Slider","PatchToolsMapsOpacitySlider",parent,"OptionsSliderTemplate")
+    opacity:SetPoint("TOPLEFT",4,-438); opacity:SetWidth(350)
+    opacity:SetMinMaxValues(0,100); opacity:SetValueStep(1); opacity:SetObeyStepOnDrag(true)
+    PatchToolsMapsOpacitySliderLow:SetText("0%"); PatchToolsMapsOpacitySliderHigh:SetText("100%")
+    opacity:SetScript("OnValueChanged",function(_,value)
+        if not self.updatingOpacity then self:SetMapTransparency(math.floor(value+.5)/100) end
+    end)
+    Label(parent,self:T("STATUS",tostring(select(2,GetBuildInfo()))),-470)
     local reset=CreateFrame("Button",nil,parent,"UIPanelButtonTemplate")
-    reset:SetPoint("TOPLEFT",0,-487); reset:SetSize(350,27); reset:SetText(self:T("RESET"))
-    local scale=Label(parent,"",-535)
+    reset:SetPoint("TOPLEFT",0,-505); reset:SetSize(350,27); reset:SetText(self:T("RESET"))
+    local scale=Label(parent,"",-548)
     reset:SetScript("OnClick",function() self:ResetMap(); self:UpdateOptions() end)
-    self.optionsUI={checks=checks,mode=mode,scale=scale,reset=reset}
+    self.optionsUI={checks=checks,mode=mode,scale=scale,reset=reset,opacity=opacity,opacityText=opacityText}
     parent:SetScript("OnShow",function() self:UpdateOptions() end)
     self:UpdateOptions()
 end
@@ -65,5 +73,10 @@ function Maps:UpdateOptions()
     end
     local labels={classic="CLASSIC",mist="MIST",full="FULL"}
     UIDropDownMenu_SetText(ui.mode,self:T(labels[self.db.mode] or "MIST"))
+    self.updatingOpacity=true
+    local transparency=math.floor(self:GetMapTransparency()*100+.5)
+    ui.opacity:SetValue(transparency)
+    ui.opacityText:SetText(self:T("TRANSPARENCY",transparency))
+    self.updatingOpacity=nil
     ui.scale:SetText(self:T("SCALE",math.floor(self.db.scale*100+.5)))
 end

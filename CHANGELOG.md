@@ -1,3 +1,11 @@
+# PatchToolsMaps 0.3.0-alpha.7 — 2026-10-25
+
+- Add map transparency using Blizzard's worldMapOpacity setting for both Classic and Modern. External native-setting changes update the slider; fullscreen retains Blizzard's opaque behavior. Clients without the native setting use a local fallback.
+- Move Deathlog's existing world-map heatmap checkbox and label into the modern footer. Preserve callbacks, visibility and the heatmap itself; restore the original placement for Classic/fullscreen and defer layout changes during combat.
+- Document the versioned header/footer widget API, checkbox containers, fallback and compatibility guidelines in INTEGRATION.md.
+
+Validation: Era/Forever integration checks in English, German and English fallback cover native/fallback opacity, CVar updates, fullscreen and combat, plus Deathlog docking, visibility, name collisions and restoration. In-game confirmation pending.
+
 # PatchToolsMaps 0.3.0-alpha.6 — 2026-10-25
 
 - Replace the Modern/Classic buttons with a single classic-frame checkbox. Unchecked keeps the modern default; existing saved choices remain unchanged.

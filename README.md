@@ -1,6 +1,6 @@
 # PatchToolsMaps
 
-**Experimental branch: custom Classic Era frame, 0.3.0-alpha.6.** See [alpha test notes](ALPHA-FRAME.md) for scope and controls. The stable release remains 0.2.1.
+**Experimental branch: custom Classic Era frame, 0.3.0-alpha.7.** See [alpha test notes](ALPHA-FRAME.md) for scope and controls. The stable release remains 0.2.1.
 
 Optional world map tools for **World of Warcraft: Forever and Classic Era**, with built-in **English and German** language support. Made by **Patch & Zen**.
 
@@ -87,3 +87,5 @@ First regular release. Requires PatchTools 0.7.0 or newer.
 - Replaced the pointed decoration with a compact square resize handle.
 
 Developer notes: [DEVELOPMENT.md](DEVELOPMENT.md). Client-data generation: [tools/README.md](tools/README.md).
+
+Addon developers: see [frame integration and widget placement](INTEGRATION.md) for the header/footer API, checkbox containers, fallback behavior and compatibility checklist.

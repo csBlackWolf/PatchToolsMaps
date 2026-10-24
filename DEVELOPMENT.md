@@ -70,3 +70,5 @@ Check GitHub issues and the planning board only when the user requests it. See [
 ## Custom frame alpha
 
 See [ALPHA-FRAME.md](ALPHA-FRAME.md) for adapter sources, the optional widget API and the test checklist. Frame.lua owns only chrome and explicitly registered widgets. Window.lua retains the stable native map coordinate system and selects fixed custom-frame insets while the Era alpha is active. The standard layout remains available from options; Forever retains its tested layout.
+
+The public frame widget API and examples are documented in [INTEGRATION.md](INTEGRATION.md). Opacity.lua shares the native worldMapOpacity CVar and WorldMapFrame_SetOpacity curve. Fixed controls belong in the frame; geographical pins stay on Blizzard's canvas.

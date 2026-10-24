@@ -51,6 +51,10 @@ local function Widget(parent)
     function methods:GetLeft() return 100 end
     function methods:GetTop() return 700 end
     function methods:SetText(s) self.text=s end
+    function methods:SetValue(value)
+        self.value=value
+        if self.scripts.OnValueChanged then self.scripts.OnValueChanged(self,value) end
+    end
     function methods:GetText() return self.text end
     function methods:SetChecked(s) self.checked=s end
     function methods:GetChecked() return self.checked end
@@ -75,8 +79,12 @@ local function Widget(parent)
     setmetatable(w,{__index=function(_,key) return methods[key] or function() end end})
     return w
 end
-function CreateFrame(_,name,parent)
+function CreateFrame(_,name,parent,template)
     local w=Widget(parent); w.TitleText=Widget(w); frames[#frames+1]=w
+    if name then _G[name]=w end
+    if template=='OptionsSliderTemplate' then
+        for _,suffix in ipairs({'Low','High','Text'}) do _G[name..suffix]=Widget(w) end
+    end
     return w
 end
 UIParent=Widget(); UIParent:SetSize(1920,1080)
@@ -134,7 +142,7 @@ PT:SelectOptionsPage('general')
 assert(PT:SelectOptionsPage('missing')==false and PT.optionPages.general:IsShown())
 PatchToolsMapsDB={customFrame=false}
 local Maps={}
-for _,name in ipairs({'Locales.lua','OverlayData.lua','GeneratedCatalog.lua','GeneratedCatalogEra.lua','Reveal.lua','Zoom.lua','Nova.lua','Frame.lua','Window.lua','Options.lua','Core.lua'}) do
+for _,name in ipairs({'Locales.lua','OverlayData.lua','GeneratedCatalog.lua','GeneratedCatalogEra.lua','Reveal.lua','Zoom.lua','Nova.lua','Opacity.lua','Frame.lua','Window.lua','Options.lua','Core.lua'}) do
     assert(loadfile(MAPS_PATH..name))('PatchToolsMaps',Maps)
 end
 Event('ADDON_LOADED','PatchToolsMaps')
@@ -482,6 +490,8 @@ assert(Maps.db.scale==5 and Maps.db.x==-2 and Maps.db.y==3)
 
 Maps.initialized=false; Maps.db.extendedZoom=false; Maps:Initialize()
 assert(Maps.db.extendedZoom==false,"preserve explicit saved zoom preference")
+-- Reinitialization above deliberately reused a registered page; resume the live event fixture.
+Maps.initialized=true
 
 -- Regression: Era's native hit test reads physical cursor coordinates. Scaling
 -- the entire frame shifts continent selection; growing its dimensions must not.
@@ -867,4 +877,69 @@ if era then
     Maps.db.customFrame=false; Maps:Refresh()
     LibStub=nil; onyNWBWorldMap=nil; nefNWBWorldMap=nil; ony99NWBWorldMap=nil; nef77NWBWorldMap=nil
     print('PASS: Nova source-driven zone/layer visibility, live/unknown timers, click forwarding, no pin movement, restoration and combat deferral.')
+end
+
+-- The native CVar is the source of truth, including edits outside our menu.
+do
+    local opacity=.35
+    local previousCVar,previousNative=C_CVar,WorldMapFrame_SetOpacity
+    C_CVar={GetCVar=function(key) assert(key=='worldMapOpacity'); return tostring(opacity) end,
+        SetCVar=function(key,value) assert(key=='worldMapOpacity'); opacity=tonumber(value); Event('CVAR_UPDATE',key) end}
+    local nativeCalls=0
+    WorldMapFrame_SetOpacity=function(value)
+        nativeCalls=nativeCalls+1
+        map:SetAlpha(1-.5*value); scroll:SetAlpha(1-.65*value)
+    end
+    Maps:ApplyMapOpacity(); assert(Maps:GetMapTransparency()==.35 and nativeCalls==1)
+    Maps.optionsUI.opacity.scripts.OnValueChanged(Maps.optionsUI.opacity,60)
+    assert(opacity==.6 and math.abs(map:GetAlpha()-.7)<.000001 and math.abs(scroll:GetAlpha()-.61)<.000001)
+    if era then
+        Maps.db.customFrame=true; Maps:Refresh(); local modern=map:GetAlpha()
+        Maps.db.customFrame=false; Maps:Refresh(); assert(map:GetAlpha()==modern and opacity==.6)
+    end
+    map:Maximize(); assert(map:GetAlpha()==1 and scroll:GetAlpha()==1 and opacity==.6)
+    map:Minimize(); assert(math.abs(map:GetAlpha()-.7)<.000001)
+    opacity=.3; Event('CVAR_UPDATE','WORLD_MAP_OPACITY')
+    assert(Maps.optionsUI.opacity.value==30 and math.abs(map:GetAlpha()-.85)<.000001, tostring(Maps.optionsUI.opacity.value)..' / '..tostring(map:GetAlpha())..' / '..tostring(opacity))
+    combat=true; local before=map:GetAlpha(); Maps:SetMapTransparency(.8)
+    assert(opacity==.8 and map:GetAlpha()==before,'combat must defer map alpha calls')
+    combat=false; Event('PLAYER_REGEN_ENABLED'); assert(math.abs(map:GetAlpha()-.6)<.000001)
+    C_CVar=nil; WorldMapFrame_SetOpacity=nil
+    Maps:SetMapTransparency(2); assert(Maps.db.transparency==1 and map:GetAlpha()==.5 and scroll:GetAlpha()==.35)
+    Maps:SetMapTransparency(0/0); assert(Maps.db.transparency==0)
+    C_CVar,WorldMapFrame_SetOpacity=previousCVar,previousNative
+    Maps.db.transparency=nil
+end
+print('PASS: shared native map opacity, external CVar edits, fullscreen policy, combat deferral and clients without native opacity helpers.')
+
+if era then
+    local container=Widget(canvas); container:SetSize(40,40)
+    local checkbox=Widget(container); checkbox:SetSize(24,24); checkbox:SetPoint('TOPLEFT',100,-50)
+    checkbox.label=Widget(container); checkbox.label:SetPoint('LEFT',checkbox,'RIGHT',0,0)
+    function checkbox.label:GetStringWidth() return 150 end
+    container.heatmap_checkbox=checkbox; DeathlogHeatmapCheckbox=checkbox
+    local clicked=0
+    checkbox:SetScript('OnClick',function() clicked=clicked+1 end)
+    local handler=checkbox.scripts.OnClick
+    Maps.db.customFrame=true; Maps:Refresh()
+    assert(container:GetParent()==Maps.customFrame.footer and container:GetWidth()==182)
+    assert(checkbox:GetParent()==container and checkbox.label:GetParent()==container)
+    assert(checkbox.points[1][1]=='LEFT' and checkbox.scripts.OnClick==handler)
+    checkbox.scripts.OnClick(); assert(clicked==1)
+    container:Hide(); Maps:Refresh(); assert(not container:IsShown(),'keep Deathlog visibility preference')
+    container:Show()
+    local stats=Widget(UIParent); DeathlogHeatmapCheckbox=Widget(stats)
+    Maps:Refresh(); assert(Maps.deathlogControl.checkbox==checkbox,'ignore duplicate name in Deathlog statistics window')
+    combat=true; Maps.db.customFrame=false; Maps:Refresh()
+    assert(container:GetParent()==Maps.customFrame.footer)
+    combat=false; Event('PLAYER_REGEN_ENABLED')
+    assert(container:GetParent()==canvas and container:GetWidth()==40 and container:GetHeight()==40)
+    assert(checkbox.points[1][1]=='TOPLEFT' and checkbox.points[1][2]==100 and checkbox.points[1][3]==-50)
+    assert(checkbox.scripts.OnClick==handler)
+    Maps.db.customFrame=true; Maps:Refresh(); map:Maximize()
+    assert(container:GetParent()==canvas and container:GetWidth()==40)
+    map:Minimize(); assert(container:GetParent()==Maps.customFrame.footer)
+    Maps.db.customFrame=false; Maps:Refresh()
+    DeathlogHeatmapCheckbox=nil
+    print('PASS: Deathlog checkbox and label dock together, retain native callbacks/visibility, ignore statistics checkbox, restore on Classic/fullscreen and defer combat changes.')
 end

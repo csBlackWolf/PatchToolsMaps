@@ -1,6 +1,6 @@
 local addon, Maps = ...
 local events=CreateFrame("Frame")
-for _,event in ipairs({"ADDON_LOADED","PLAYER_REGEN_ENABLED","PLAYER_REGEN_DISABLED","MAP_EXPLORATION_UPDATED","DISPLAY_SIZE_CHANGED"}) do
+for _,event in ipairs({"ADDON_LOADED","PLAYER_REGEN_ENABLED","PLAYER_REGEN_DISABLED","MAP_EXPLORATION_UPDATED","DISPLAY_SIZE_CHANGED","CVAR_UPDATE"}) do
     events:RegisterEvent(event)
 end
 function Maps:Refresh(rebuildZoom)
@@ -8,6 +8,7 @@ function Maps:Refresh(rebuildZoom)
     if not self.map then self:Attach(); return end
     if self.customFrame and not (InCombatLockdown and InCombatLockdown()) then self:DiscoverFrameWidgets() end
     if self.resetPending then self:ResetWindow() else self:ApplyWindow() end
+    self:ApplyMapOpacity()
     if self.zoomPending and not (InCombatLockdown and InCombatLockdown()) and self.map:IsShown()
         and self.map.ScrollContainer and type(self.map.ScrollContainer.zoomLevels)=="table"
         and #self.map.ScrollContainer.zoomLevels>0 then
@@ -112,6 +113,10 @@ events:SetScript("OnEvent",function(_,event,name)
             Maps:Attach()
             if Maps.customFrame and not (InCombatLockdown and InCombatLockdown()) then
                 Maps:DiscoverFrameWidgets(); Maps:LayoutCustomFrame()
+            end
+        elseif event=="CVAR_UPDATE" then
+            if type(name)=="string" and name:lower():gsub("_","")=="worldmapopacity" then
+                Maps:ApplyMapOpacity(); Maps:UpdateOptions()
             end
         elseif event=="PLAYER_REGEN_ENABLED" or event=="DISPLAY_SIZE_CHANGED" then Maps:Refresh()
         elseif event=="MAP_EXPLORATION_UPDATED" then Maps:RefreshReveal() end

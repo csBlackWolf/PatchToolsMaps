@@ -1,4 +1,5 @@
 local _, Maps = ...
+Maps.frameWidgetAPI=1
 
 -- Alpha chrome surrounds the existing map. Its canvas and data providers stay
 -- owned by Blizzard and the addons which created them.
@@ -65,6 +66,7 @@ function Maps:RegisterFrameWidget(id,frame,slot)
 end
 
 function Maps:DiscoverFrameWidgets()
+    self:DiscoverDeathlogControl()
     if not LibStub then return end
     local buttons=LibStub("Krowi_WorldMapButtons-1.4",true)
     if buttons and type(buttons.Buttons)=="table" then
@@ -88,6 +90,42 @@ function Maps:DiscoverFrameWidgets()
     local silver=ace and ace:GetAddon("SilverDragon",true)
     local ldb=silver and silver:GetModule("LDB",true)
     if ldb and ldb.worldmap then self:RegisterFrameWidget("SilverDragon",ldb.worldmap,"buttons") end
+end
+
+function Maps:DiscoverDeathlogControl()
+    if not self.map or (InCombatLockdown and InCombatLockdown()) then return end
+    local checkbox=_G.DeathlogHeatmapCheckbox
+    local container=checkbox and type(checkbox.GetParent)=="function" and checkbox:GetParent()
+    -- Deathlog uses the same global name in its own statistics window. Adopt
+    -- only the world-map container, never that other checkbox or any heatmap pin.
+    if not self.deathlogControl and Allowed(container) and Allowed(checkbox)
+        and container:GetParent()==self.map:GetCanvas() and container.heatmap_checkbox==checkbox then
+        if self:RegisterFrameWidget("Deathlog.heatmap",container,"info-right") then
+            self.deathlogControl={container=container,checkbox=checkbox}
+        end
+    end
+    self:LayoutDeathlogControl(self:UseCustomFrame())
+end
+
+function Maps:LayoutDeathlogControl(enabled)
+    local control=self.deathlogControl
+    if not control then return end
+    local container,checkbox=control.container,control.checkbox
+    if enabled then
+        if not control.original then
+            control.original=Snapshot(checkbox)
+            control.width,control.height=container:GetSize()
+        end
+        local label=checkbox.label
+        local width=label and label.GetStringWidth and label:GetStringWidth()
+        if type(width)~="number" then width=120 end
+        container:SetSize(checkbox:GetWidth()+width+8,24)
+        checkbox:ClearAllPoints()
+        checkbox:SetPoint("LEFT",container,"LEFT",0,0)
+    elseif control.original then
+        Restore(control.original); control.original=nil
+        container:SetSize(control.width,control.height)
+    end
 end
 
 function Maps:InstallCustomFrame(map)
@@ -171,6 +209,7 @@ function Maps:LayoutCustomFrame()
     if not self.customFrame or self.layingOutFrame or (InCombatLockdown and InCombatLockdown()) then return end
     self.layingOutFrame=true
     local enabled=self:UseCustomFrame()
+    self:LayoutDeathlogControl(enabled)
     self:UpdateNovaTimers()
     self.customFrame:SetShown(enabled)
     for _,entry in ipairs(self.frameArt) do entry.region:SetAlpha(enabled and 0 or entry.alpha) end

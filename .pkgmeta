@@ -9,6 +9,7 @@ ignore:
   - .pkgmeta
   - README.md
   - ALPHA-FRAME.md
+  - INTEGRATION.md
   - DEVELOPMENT.md
   - .github
   - tests

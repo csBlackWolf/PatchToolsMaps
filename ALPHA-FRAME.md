@@ -1,6 +1,6 @@
 # Custom map frame alpha
 
-Version: 0.3.0-alpha.5. Branch: alpha/custom-map-frame. Based on stable 0.2.1.
+Version: 0.3.0-alpha.6. Branch: alpha/custom-map-frame. Based on stable 0.2.1.
 
 This is an experimental Classic Era frame. Forever keeps its native layout until a separate in-game test is possible. No stable release tag is changed.
 
@@ -36,7 +36,7 @@ Slots: `buttons`, `info-left`, `info-right`. IDs and widget registrations must b
 - Button tooltips, left/right/shift clicks and addon-specific show/hide options.
 - Cursor/player coordinates at different zoom levels, window sizes and map views.
 - Drag, resize, reset, full-screen/minimized transitions and combat entry/exit.
-- Switch between Modern (default) and Classic in the Map settings; reload with it both enabled and disabled.
+- Toggle the classic-frame checkbox in the Map settings (unchecked means Modern, the default); reload with it both enabled and disabled.
 - Check for overlapping third-party coordinate text and timer labels.
 
 Automated fixtures cover docking, preserved handlers/visibility, coordinate formatting, library relayout, restoration, combat deferral and full-screen changes in addition to the stable regression suite. Actual appearance and compatibility with all installed addons still require an in-game test. Nova-specific fixtures cover map-driven visibility, unknown/live timer text, late layer frames, click forwarding, complete hint tooltips, original pin preservation, restoration and combat deferral.

@@ -1,3 +1,10 @@
+# PatchToolsMaps 0.3.0-alpha.6 — 2026-10-25
+
+- Replace the Modern/Classic buttons with a single classic-frame checkbox. Unchecked keeps the modern default; existing saved choices remain unchanged.
+- Use a native dropdown for unexplored-area display: Classic, semi-transparent fog or fully revealed.
+
+Validation: dropdown selection, checked states and native/custom frame restoration pass the Era/Forever integration checks in English, German and English fallback. In-game confirmation pending.
+
 # PatchToolsMaps 0.3.0-alpha.5 — 2026-10-24
 
 - Offer Modern (default) and Classic map appearance buttons on Classic Era. Preserve saved choices and restore the native frame and original addon widget placement in Classic mode.

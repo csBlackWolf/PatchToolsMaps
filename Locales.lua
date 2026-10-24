@@ -1,8 +1,8 @@
 local _, Maps = ...
 _G.PatchToolsMaps = Maps
-Maps.version = "0.3.0-alpha.5"
+Maps.version = "0.3.0-alpha.6"
 local en = {
-    FRAME_STYLE="Map style", FRAME_MODERN="Modern (default)", FRAME_CLASSIC="Classic",
+    FRAME_CLASSIC_OPTION="Use the classic map frame", FRAME_CLASSIC_HINT="Unchecked: modern frame (default).",
     FRAME_COORDS="Player: %s    |    Cursor: %s",
     NOVA_LAYER="Layer %s", NOVA_OPEN="Type /buffs to view your characters' world buffs.",
     NOVA_CLICK="Click to open the Nova World Buffs overview.",
@@ -19,7 +19,7 @@ local en = {
     COMBAT="Map window changes are deferred until combat ends.",
 }
 local de = {
-    FRAME_STYLE="Kartenansicht", FRAME_MODERN="Modern (Standard)", FRAME_CLASSIC="Klassisch",
+    FRAME_CLASSIC_OPTION="Klassischen Kartenrahmen verwenden", FRAME_CLASSIC_HINT="Ausgeschaltet: moderner Rahmen (Standard).",
     FRAME_COORDS="Spieler: %s    |    Maus: %s",
     NOVA_LAYER="Layer %s", NOVA_OPEN="Gib /buffs ein, um die Weltbuffs deiner Charaktere anzuzeigen.",
     NOVA_CLICK="Klicken, um die Übersicht von Nova World Buffs zu öffnen.",

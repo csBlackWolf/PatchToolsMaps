@@ -1,3 +1,13 @@
+
+local dropdownItems={}
+function UIDropDownMenu_SetWidth(frame,width) frame.dropdownWidth=width end
+function UIDropDownMenu_Initialize(frame,fn) frame.dropdownInitialize=fn end
+function UIDropDownMenu_CreateInfo() return {} end
+function UIDropDownMenu_AddButton(info) dropdownItems[#dropdownItems+1]=info end
+function UIDropDownMenu_SetText(frame,text) frame.dropdownText=text end
+local function OpenDropdown(frame)
+    dropdownItems={}; frame.dropdownInitialize(frame,1); return dropdownItems
+end
 local frames={}
 unpack=table.unpack or unpack
 local combat=false
@@ -138,12 +148,21 @@ assert(not Maps.map)
 PT:SelectOptionsPage('maps'); assert(PT.optionPages.maps:IsShown())
 assert(Maps.optionsUI.checks.movable.checked==true)
 if era then
-    assert(Maps.optionsUI.styles.modern and Maps.optionsUI.styles.classic)
-    Maps.optionsUI.styles.modern.scripts.OnClick(); assert(Maps.db.customFrame==true)
-    Maps.optionsUI.styles.classic.scripts.OnClick(); assert(Maps.db.customFrame==false)
+    local classic=Maps.optionsUI.checks.customFrame
+    assert(classic:GetChecked()==true)
+    classic:SetChecked(false); classic.scripts.OnClick(classic); assert(Maps.db.customFrame==true)
+    assert(classic:GetChecked()==false)
+    classic:SetChecked(true); classic.scripts.OnClick(classic); assert(Maps.db.customFrame==false)
 else
-    assert(next(Maps.optionsUI.styles)==nil,'Forever keeps its native layout')
+    assert(not Maps.optionsUI.checks.customFrame,'Forever keeps its native layout')
 end
+local revealChoices=OpenDropdown(Maps.optionsUI.mode)
+assert(#revealChoices==3 and revealChoices[2].checked)
+for i,value in ipairs({'classic','mist','full'}) do
+    revealChoices[i].func(); assert(Maps.db.mode==value)
+end
+revealChoices[2].func()
+assert(Maps.db.mode=='mist' and Maps.optionsUI.mode.dropdownText==Maps:T('MIST'))
 -- Early registration, before options exist, uses the same interface.
 local early={}
 assert(loadfile(base..'Extensions.lua'))('PatchTools',early)

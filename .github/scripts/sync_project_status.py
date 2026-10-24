@@ -1,0 +1,138 @@
+"""Mirror the shared Projects board into this repository's issue status labels.
+
+PROJECT_READ_TOKEN only reads Projects. GITHUB_TOKEN only writes local issues.
+The board is authoritative; neither issue bodies nor labels are executed as code.
+"""
+import json
+import os
+import urllib.error
+import urllib.parse
+import urllib.request
+
+
+STATUSES = {
+    "New": "status: new",
+    "Reviewed": "status: reviewed",
+    "Planned": "status: planned",
+    "In Progress": "status: in progress",
+    "Next release": "status: next release",
+    "Deferred": "status: deferred",
+    "Done": "status: done",
+}
+COLORS = {"New": "d4c5f9", "Reviewed": "bfd4f2", "Planned": "fbca04",
+          "In Progress": "1d76db", "Next release": "0e8a16",
+          "Deferred": "eeeeee", "Done": "0e8a16"}
+QUERY = """query($after: String) {
+  user(login: "csBlackWolf") {
+    projectV2(number: 9) {
+      items(first: 100, after: $after) {
+        pageInfo { hasNextPage endCursor }
+        nodes {
+          isArchived
+          fieldValueByName(name: "Status") {
+            ... on ProjectV2ItemFieldSingleSelectValue { name }
+          }
+          content {
+            __typename
+            ... on Issue { number repository { nameWithOwner } }
+          }
+        }
+      }
+    }
+  }
+}"""
+
+
+def request(path, token, method="GET", data=None):
+    url = "https://api.github.com" + path
+    req = urllib.request.Request(url, method=method,
+        data=json.dumps(data).encode() if data is not None else None,
+        headers={"Authorization": "Bearer " + token,
+                 "Accept": "application/vnd.github+json",
+                 "Content-Type": "application/json",
+                 "User-Agent": "PatchTools-project-status"})
+    with urllib.request.urlopen(req, timeout=30) as response:
+        return json.load(response)
+
+
+def read_board(token):
+    after = None
+    items = []
+    while True:
+        result = request("/graphql", token, "POST", {"query": QUERY, "variables": {"after": after}})
+        if result.get("errors"):
+            raise RuntimeError("Cannot read the planning board. Check the Projects read permission.")
+        user = (result.get("data") or {}).get("user") or {}
+        project = user.get("projectV2")
+        if not project:
+            raise RuntimeError("Planning board unavailable; no issue labels were changed.")
+        page = project["items"]
+        items.extend(page["nodes"])
+        if not page["pageInfo"]["hasNextPage"]:
+            return items
+        after = page["pageInfo"]["endCursor"]
+        if not after:
+            raise RuntimeError("Incomplete board pagination; no issue labels were changed.")
+
+
+def desired_items(items, repository):
+    for item in items:
+        content = item.get("content") or {}
+        if item.get("isArchived") or content.get("__typename") != "Issue":
+            continue
+        if content["repository"]["nameWithOwner"] != repository:
+            continue
+        state = (item.get("fieldValueByName") or {}).get("name")
+        if state not in STATUSES:
+            print("Skipped issue #" + str(content["number"]) + ": unrecognized or missing board status.")
+            continue
+        yield content["number"], state
+
+
+def sync_issue(repository, number, state, token):
+    base = "/repos/" + repository
+    issue_path = base + "/issues/" + str(number) + "/labels"
+    current = set()
+    page = 1
+    while True:
+        labels = request(issue_path + "?per_page=100&page=" + str(page), token)
+        current.update(label["name"] for label in labels)
+        if len(labels) < 100:
+            break
+        page += 1
+    desired = STATUSES[state]
+    if desired not in current:
+        # GitHub may silently ignore assignment of a nonexistent repository label.
+        try:
+            request(base + "/labels/" + urllib.parse.quote(desired, safe=""), token)
+        except urllib.error.HTTPError as error:
+            if error.code != 404:
+                raise
+            request(base + "/labels", token, "POST",
+                    {"name": desired, "color": COLORS[state],
+                     "description": "Status from the shared PatchTools planning board"})
+        request(issue_path, token, "POST", {"labels": [desired]})
+    for previous in sorted(current.intersection(STATUSES.values()) - {desired}):
+        try:
+            request(issue_path + "/" + urllib.parse.quote(previous, safe=""), token, "DELETE")
+        except urllib.error.HTTPError as error:
+            if error.code != 404:
+                raise
+    print("Issue #" + str(number) + ": " + desired)
+
+
+def main():
+    project_token = os.environ.get("PROJECT_READ_TOKEN")
+    issue_token = os.environ.get("GITHUB_TOKEN")
+    repository = os.environ.get("GITHUB_REPOSITORY")
+    if not project_token or not issue_token:
+        raise RuntimeError("Project synchronization requires PROJECT_READ_TOKEN and GITHUB_TOKEN.")
+    if repository not in {"csBlackWolf/PatchTools", "csBlackWolf/PatchToolsMaps"}:
+        raise RuntimeError("Refusing to change an unexpected repository.")
+    items = read_board(project_token)
+    for number, state in desired_items(items, repository):
+        sync_issue(repository, number, state, issue_token)
+
+
+if __name__ == "__main__":
+    main()

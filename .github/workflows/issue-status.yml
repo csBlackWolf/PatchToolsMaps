@@ -23,7 +23,7 @@ jobs:
 
           statuses = {
               "status: new", "status: reviewed", "status: planned",
-              "status: in progress", "status: next release", "status: deferred",
+              "status: in progress", "status: next release", "status: deferred", "status: done",
           }
           with open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8") as source:
               event = json.load(source)

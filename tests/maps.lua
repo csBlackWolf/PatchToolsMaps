@@ -901,6 +901,25 @@ do
     map:Minimize(); assert(math.abs(map:GetAlpha()-.7)<.000001)
     opacity=.3; Event('CVAR_UPDATE','WORLD_MAP_OPACITY')
     assert(Maps.optionsUI.opacity.value==30 and math.abs(map:GetAlpha()-.85)<.000001, tostring(Maps.optionsUI.opacity.value)..' / '..tostring(map:GetAlpha())..' / '..tostring(opacity))
+    if era then
+        GameTooltip=Widget(UIParent)
+        Maps.db.customFrame=true; Maps:Refresh()
+        local header=Maps.customHeader
+        header.scripts.OnClick(header,'RightButton')
+        local popup=Maps.opacityPopup
+        assert(popup:IsShown() and popup.slider.value==30)
+        popup.slider:SetValue(42)
+        assert(opacity==.42 and Maps.optionsUI.opacity.value==42 and popup.slider.value==42)
+        opacity=.25; Event('CVAR_UPDATE','worldMapOpacity'); assert(popup.slider.value==25)
+        header.scripts.OnClick(header,'RightButton'); assert(not popup:IsShown())
+        header.scripts.OnClick(header,'RightButton'); map:Hide(); assert(not popup:IsShown())
+        map:Show(); header.scripts.OnClick(header,'RightButton'); map:Maximize()
+        assert(not popup:IsShown()); map:Minimize()
+        local escaped=false
+        for _,name in ipairs(UISpecialFrames) do if name=='PatchToolsMapsOpacityPopup' then escaped=true end end
+        assert(escaped,'quick opacity popup must support Escape dismissal')
+        Maps.db.customFrame=false; Maps:Refresh()
+    end
     combat=true; local before=map:GetAlpha(); Maps:SetMapTransparency(.8)
     assert(opacity==.8 and map:GetAlpha()==before,'combat must defer map alpha calls')
     combat=false; Event('PLAYER_REGEN_ENABLED'); assert(math.abs(map:GetAlpha()-.6)<.000001)
@@ -927,11 +946,12 @@ if era then
     Maps.db.customFrame=true; Maps:Refresh()
     local action=Maps.deathlogControl.button
     assert(action:GetParent()==Maps.customFrame.buttons and action:IsShown())
+    assert(action.border.texture==136430 and action.icon.vertexColor[1]==1 and action.state:IsShown())
     assert(container:GetParent()==canvas and container:GetWidth()==40 and container:GetAlpha()==0)
     assert(checkbox:GetParent()==container and checkbox.label:GetParent()==container)
     assert(checkbox.points[1][1]=='TOPLEFT' and checkbox.scripts.OnClick==handler and not checkbox:IsMouseEnabled())
     action.scripts.OnClick(action,'LeftButton')
-    assert(clicked==1 and not checkbox:GetChecked() and action.icon.desaturated)
+    assert(clicked==1 and not checkbox:GetChecked() and not action.icon.desaturated and not action.state:IsShown())
     action.scripts.OnClick(action,'RightButton'); assert(clicked==1)
     GameTooltip=Widget(UIParent)
     action.scripts.OnEnter(); assert(GameTooltip.text:find(Maps:T('STATE_OFF'),1,true))

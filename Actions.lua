@@ -30,8 +30,23 @@ function Maps:RegisterMapAction(id,options)
         insets={left=2,right=2,top=2,bottom=2}})
     button.icon=button:CreateTexture(nil,"ARTWORK")
     button.icon:SetPoint("CENTER"); button.icon:SetSize(18,18); button.icon:SetTexture(options.icon)
+    if options.style=="minimap" then
+        button.minimapStyle=true
+        button:SetBackdrop(nil); button:SetSize(31,31)
+        local background=button:CreateTexture(nil,"BACKGROUND")
+        background:SetTexture(136467); background:SetSize(20,20); background:SetPoint("TOPLEFT",7,-5)
+        button.border=button:CreateTexture(nil,"OVERLAY")
+        button.border:SetTexture(136430); button.border:SetSize(53,53); button.border:SetPoint("TOPLEFT",0,0)
+        button.icon:ClearAllPoints(); button.icon:SetSize(17,17); button.icon:SetPoint("TOPLEFT",7,-6)
+        button.icon:SetTexCoord(.05,.95,.05,.95)
+    end
+    button.state=button:CreateTexture(nil,"OVERLAY",nil,1)
+    button.state:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
+    button.state:SetSize(12,12); button.state:SetPoint("BOTTOMRIGHT",0,0)
     local hover=button:CreateTexture(nil,"HIGHLIGHT")
-    hover:SetAllPoints(); hover:SetColorTexture(1,.8,.35,.18)
+    hover:SetAllPoints()
+    if button.minimapStyle then hover:SetTexture(136477)
+    else hover:SetColorTexture(1,.8,.35,.18) end
     if not self:RegisterFrameWidget(id,button,"buttons") then return false end
     self.mapActions[id]={button=button,options=options}
     button:SetScript("OnClick",function(_,mouseButton)
@@ -58,10 +73,13 @@ function Maps:UpdateMapActions()
         local shown=modern and wanted and true or false
         if button:IsShown()~=shown then changed=true; button:SetShown(shown) end
         local active=options.isActive==nil or (Value(options,"isActive",false) and true or false)
-        button.icon:SetDesaturated(not active)
-        button.icon:SetVertexColor(active and 1 or .55,active and 1 or .55,active and 1 or .55)
-        button:SetBackdropColor(.055,.045,.035,1)
-        button:SetBackdropBorderColor(active and .85 or .35,active and .65 or .3,active and .25 or .25,1)
+        button.icon:SetDesaturated(false)
+        button.icon:SetVertexColor(1,1,1)
+        button.state:SetShown(options.isActive~=nil and active)
+        if not button.minimapStyle then
+            button:SetBackdropColor(.055,.045,.035,1)
+            button:SetBackdropBorderColor(active and .85 or .35,active and .65 or .3,active and .25 or .25,1)
+        end
     end
     return changed
 end

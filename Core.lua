@@ -116,7 +116,7 @@ events:SetScript("OnEvent",function(_,event,name)
             end
         elseif event=="CVAR_UPDATE" then
             if type(name)=="string" and name:lower():gsub("_","")=="worldmapopacity" then
-                Maps:ApplyMapOpacity(); Maps:UpdateOptions()
+                Maps:ApplyMapOpacity(); Maps:UpdateOptions(); Maps:UpdateOpacityPopup()
             end
         elseif event=="PLAYER_REGEN_ENABLED" or event=="DISPLAY_SIZE_CHANGED" then Maps:Refresh()
         elseif event=="MAP_EXPLORATION_UPDATED" then Maps:RefreshReveal() end

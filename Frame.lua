@@ -133,6 +133,7 @@ function Maps:DiscoverDeathlogControl()
         local broker=LibStub and LibStub("LibDataBroker-1.1",true)
         local data=broker and broker:GetDataObjectByName("Deathlog")
         local registered,button=self:RegisterMapAction("Deathlog.heatmap",{
+            style="minimap",
             icon=data and data.icon or "Interface\\TARGETINGFRAME\\UI-TargetingFrame-Skull",
             tooltip=function()
                 return self:T("DEATHLOG_HEATMAP",self:T(checkbox:GetChecked() and "STATE_ON" or "STATE_OFF"))
@@ -185,6 +186,15 @@ function Maps:InstallCustomFrame(map)
     header:SetPoint("TOPLEFT",9,-4)
     header:SetHeight(26); header:RegisterForDrag("LeftButton")
     self.customHeader=header
+    header:RegisterForClicks("RightButtonUp")
+    header:SetScript("OnClick",function(_,button)
+        if button=="RightButton" then self:ToggleOpacityPopup(header) end
+    end)
+    header:SetScript("OnEnter",function()
+        GameTooltip:SetOwner(header,"ANCHOR_BOTTOM"); GameTooltip:SetText(self:T("OPACITY_SHORTCUT")); GameTooltip:Show()
+    end)
+    header:SetScript("OnLeave",function() GameTooltip:Hide() end)
+    header:HookScript("OnDragStart",function() if self.opacityPopup then self.opacityPopup:Hide() end end)
     frame.title=header:CreateFontString(nil,"OVERLAY","GameFontNormal")
     frame.title:SetPoint("LEFT",0,0); frame.title:SetPoint("RIGHT",-4,0)
     frame.title:SetJustifyH("LEFT"); frame.title:SetText("PatchToolsMaps")
@@ -250,6 +260,7 @@ function Maps:LayoutCustomFrame()
     if not self.customFrame or self.layingOutFrame or (InCombatLockdown and InCombatLockdown()) then return end
     self.layingOutFrame=true
     local enabled=self:UseCustomFrame()
+    if not enabled and self.opacityPopup then self.opacityPopup:Hide() end
     self:LayoutDeathlogControl(enabled)
     self:UpdateMapActions()
     self:UpdateNovaTimers()

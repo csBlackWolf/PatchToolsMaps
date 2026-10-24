@@ -33,8 +33,9 @@ load order can be handled with `OptionalDeps` or retrying after `ADDON_LOADED`.
 Your original native control remains the fallback when Modern is inactive;
 custom action icons themselves are visible only in the Modern frame.
 
-The icon is 24 px with a tooltip. An optional `isActive` callback highlights the
-active state and dims/desaturates the inactive state. `isShown` controls whether
+The icon is displayed at 24 px with a tooltip. An optional `isActive` callback
+adds a small checkmark when active; original icon colors remain visible in both
+states. Set `style = "minimap"` for the native round minimap border. `isShown` controls whether
 the icon is present; omit it to show the action whenever Modern is active. These
 callbacks are polled while the modern frame is visible: keep them cheap and
 read-only. `onClick` receives the button and mouse-button name; your addon owns
@@ -133,3 +134,5 @@ Test without PatchToolsMaps, with Modern and Classic, minimized/fullscreen, at
 different zoom/window/UI scales, before and after reload, during/after combat,
 and with your own feature disabled. Verify clicks, right-clicks, modifiers,
 tooltips, translated labels, visibility changes and original-anchor restoration.
+
+The modern map area name has a right-click shortcut to a small transparency slider. It shares the same setting as the Map settings page, and closes via the close button, Escape, a second right-click, or when the map closes/fullscreen starts.

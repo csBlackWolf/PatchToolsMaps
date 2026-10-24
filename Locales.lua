@@ -1,7 +1,8 @@
 local _, Maps = ...
 _G.PatchToolsMaps = Maps
-Maps.version = "0.3.0-alpha.8"
+Maps.version = "0.3.0-alpha.9"
 local en = {
+    OPACITY_SHORTCUT="Right-click the area name to adjust map transparency.",
     STATE_ON="On", STATE_OFF="Off", DEATHLOG_HEATMAP="Deathlog · Heatmap: %s\nClick to toggle the heatmap.",
     TRANSPARENCY="Map transparency (both frames): %d%%",
     FRAME_CLASSIC_OPTION="Use the classic map frame", FRAME_CLASSIC_HINT="Unchecked: modern frame (default).",
@@ -21,6 +22,7 @@ local en = {
     COMBAT="Map window changes are deferred until combat ends.",
 }
 local de = {
+    OPACITY_SHORTCUT="Rechtsklick auf den Gebietsnamen: Kartentransparenz einstellen.",
     STATE_ON="Ein", STATE_OFF="Aus", DEATHLOG_HEATMAP="Deathlog · Heatmap: %s\nKlicken, um die Heatmap umzuschalten.",
     TRANSPARENCY="Kartentransparenz (beide Rahmen): %d%%",
     FRAME_CLASSIC_OPTION="Klassischen Kartenrahmen verwenden", FRAME_CLASSIC_HINT="Ausgeschaltet: moderner Rahmen (Standard).",

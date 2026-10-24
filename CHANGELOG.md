@@ -1,3 +1,11 @@
+# PatchToolsMaps 0.3.0-alpha.9 — 2026-10-25
+
+- Right-click the area name in the modern frame for a quick transparency slider, synchronized with the native setting and the Map settings page. Close it with Escape, its close button, a second right-click, or by closing/maximizing the map.
+- Give the Deathlog heatmap icon the native round minimap border and retain its original colors. Show active state with a small checkmark and tooltip instead of dimming the skull.
+- Document the optional minimap action style and revised state indicator.
+
+Validation: Era/Forever integration checks in English, German and English fallback cover quick-slider synchronization/cleanup, state indicators and existing toolbar/map behavior. In-game appearance confirmation pending.
+
 # PatchToolsMaps 0.3.0-alpha.8 — 2026-10-25
 
 - Replace the Deathlog footer checkbox with its minimap skull icon in the header. Click to toggle the original heatmap function; icon and tooltip show the current state. Restore the native checkbox in Classic/fullscreen and keep its own visibility preference.

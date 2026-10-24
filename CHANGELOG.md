@@ -1,3 +1,10 @@
+# PatchToolsMaps 0.3.0-alpha.5 — 2026-10-24
+
+- Offer Modern (default) and Classic map appearance buttons on Classic Era. Preserve saved choices and restore the native frame and original addon widget placement in Classic mode.
+- Share the PatchTools addon-list icon, now included in the companion base test package.
+
+Validation: automated style-selection and Era/Forever integration fixtures in English, German and English fallback. Local alpha only; in-game appearance/reload confirmation pending. Forever retains its existing native appearance.
+
 # PatchToolsMaps 0.3.0-alpha.4 — 2026-10-24
 
 - Fix all Nova buff timers appearing on the first map opening after reload, before a relevant buff zone has been viewed.

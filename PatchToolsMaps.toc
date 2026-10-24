@@ -4,7 +4,7 @@
 ## Notes: Optional world map controls for PatchTools.
 ## Notes-deDE: Optionale Weltkartenfunktionen für PatchTools.
 ## Author: Patch & Zen
-## Version: 0.3.0-alpha.4
+## Version: 0.3.0-alpha.5
 ## X-License: MIT
 ## X-Curse-Project-ID: 1761299
 ## Dependencies: PatchTools

@@ -137,6 +137,13 @@ assert(not PT:RegisterOptionsPage('about','Reserved',function() end))
 assert(not Maps.map)
 PT:SelectOptionsPage('maps'); assert(PT.optionPages.maps:IsShown())
 assert(Maps.optionsUI.checks.movable.checked==true)
+if era then
+    assert(Maps.optionsUI.styles.modern and Maps.optionsUI.styles.classic)
+    Maps.optionsUI.styles.modern.scripts.OnClick(); assert(Maps.db.customFrame==true)
+    Maps.optionsUI.styles.classic.scripts.OnClick(); assert(Maps.db.customFrame==false)
+else
+    assert(next(Maps.optionsUI.styles)==nil,'Forever keeps its native layout')
+end
 -- Early registration, before options exist, uses the same interface.
 local early={}
 assert(loadfile(base..'Extensions.lua'))('PatchTools',early)

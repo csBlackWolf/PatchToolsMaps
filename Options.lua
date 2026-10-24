@@ -31,12 +31,28 @@ function Maps:BuildOptions(parent)
     end
     Label(parent,self:T("VISUAL"),-393)
     Label(parent,self:T("STATUS",tostring(select(2,GetBuildInfo()))),-425)
-    if PatchTools.isClassicEra then Check("customFrame","CUSTOM_FRAME",-451) end
+    local styles={}
+    if PatchTools.isClassicEra then
+        local title=Label(parent,self:T("FRAME_STYLE"),-457,"GameFontNormal")
+        title:SetWidth(140)
+        for i,entry in ipairs({{"modern","FRAME_MODERN"},{"classic","FRAME_CLASSIC"}}) do
+            local style=entry[1]
+            local button=CreateFrame("Button",nil,parent,"UIPanelButtonTemplate")
+            button:SetPoint("TOPLEFT",145+(i-1)*172,-450); button:SetSize(164,26)
+            button:SetText(self:T(entry[2]))
+            button:SetScript("OnClick",function()
+                self.db.customFrame=style=="modern"
+                self:Refresh()
+                self:UpdateOptions()
+            end)
+            styles[style]=button
+        end
+    end
     local reset=CreateFrame("Button",nil,parent,"UIPanelButtonTemplate")
     reset:SetPoint("TOPLEFT",0,-487); reset:SetSize(350,27); reset:SetText(self:T("RESET"))
     local scale=Label(parent,"",-535)
     reset:SetScript("OnClick",function() self:ResetMap(); self:UpdateOptions() end)
-    self.optionsUI={checks=checks,modes=modes,scale=scale,reset=reset}
+    self.optionsUI={checks=checks,modes=modes,styles=styles,scale=scale,reset=reset}
     parent:SetScript("OnShow",function() self:UpdateOptions() end)
     self:UpdateOptions()
 end
@@ -45,5 +61,8 @@ function Maps:UpdateOptions()
     if not ui then return end
     for key,box in pairs(ui.checks) do box:SetChecked(self.db[key]) end
     for mode,button in pairs(ui.modes) do if self.db.mode==mode then button:Disable() else button:Enable() end end
+    for style,button in pairs(ui.styles) do
+        if self.db.customFrame==(style=="modern") then button:Disable() else button:Enable() end
+    end
     ui.scale:SetText(self:T("SCALE",math.floor(self.db.scale*100+.5)))
 end

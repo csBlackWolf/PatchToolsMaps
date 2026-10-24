@@ -1,6 +1,6 @@
 local _, Maps = ...
 _G.PatchToolsMaps = Maps
-Maps.version = "0.2.0"
+Maps.version = "0.2.1"
 local en = {
     TITLE="Map", INTRO="PatchToolsMaps · Changes affect only the world map display.",
     MOVABLE="Move the map window", RESIZE="Resize with the bottom-right corner handle",

@@ -142,7 +142,18 @@ local map=Widget(UIParent)
 WorldMapFrame=map
 local nativeDragCalls=0
 if era then
+    -- Native Era XML: fixed border textures in MiniBorderFrame, with the title
+    -- drag area and window controls parented directly to WorldMapFrame.
+    map.MiniBorderFrame=Widget(map)
+    MiniBorderLeft=Widget(map.MiniBorderFrame); MiniBorderLeft:SetSize(512,512)
+    MiniBorderLeft:SetPoint('TOPLEFT',map.MiniBorderFrame,'TOPLEFT',12,0)
+    MiniBorderRight=Widget(map.MiniBorderFrame); MiniBorderRight:SetSize(128,512)
+    MiniBorderRight:SetPoint('LEFT',MiniBorderLeft,'RIGHT',0,0)
+    WorldMapFrameCloseButton=Widget(map)
+    map.MaximizeMinimizeFrame=Widget(map)
     WorldMapTitleButton=Widget(map)
+    WorldMapTitleButton:SetSize(544,22)
+    WorldMapTitleButton:SetPoint('TOPLEFT',MiniBorderLeft,'TOPLEFT',0,0)
     WorldMapScreenAnchor=Widget(UIParent)
     WorldMapScreenAnchor:SetPoint('TOPLEFT',UIParent,'TOPLEFT',-9999,9999)
     WorldMapTitleButton:SetScript('OnDragStart',function() nativeDragCalls=nativeDragCalls+1 end)
@@ -280,12 +291,13 @@ end
 if era then assert(not PT.optionPages.phase and not PT.optionNavigation.phase) end
 layer=oldLayer; artID=56; explored={}; Maps.db.knownOverlays={}
 -- Window scale, reset, fullscreen and combat deferral.
-Maps.db.scale=1.3; Maps:Refresh(); assert(map.scale==1.3)
+local function WindowFactor() return era and map:GetWidth()/Maps.originalWidth or map:GetScale()/Maps.originalScale end
+Maps.db.scale=1.3; Maps:Refresh(); assert(math.abs(WindowFactor()-1.3)<.00001)
 map:Maximize(); assert(map.scale==1 and not Maps.dragBar:IsShown())
-map:Minimize(); assert(map.scale==1.3 and Maps.dragBar:IsShown())
-combat=true; Maps.db.scale=.8; Maps:Refresh(); assert(map.scale==1.3)
+map:Minimize(); assert(math.abs(WindowFactor()-1.3)<.00001 and Maps.dragBar:IsShown())
+combat=true; Maps.db.scale=.8; Maps:Refresh(); assert(math.abs(WindowFactor()-1.3)<.00001)
 Maps.db.extendedZoom=true; Maps:Refresh(true); assert(#scroll.zoomLevels==2)
-combat=false; Event('PLAYER_REGEN_ENABLED'); assert(map.scale==.8 and #scroll.zoomLevels==2)
+combat=false; Event('PLAYER_REGEN_ENABLED'); assert(math.abs(WindowFactor()-.8)<.00001 and #scroll.zoomLevels==2)
 Maps.dragBar.scripts.OnDragStart(); assert(Maps.moving)
 Maps.dragBar.scripts.OnDragStop(); assert(not Maps.moving and Maps.db.x and Maps.db.y)
 Maps.dragBar.scripts.OnDragStart()
@@ -433,3 +445,213 @@ assert(Maps.db.scale==5 and Maps.db.x==-2 and Maps.db.y==3)
 
 Maps.initialized=false; Maps.db.extendedZoom=false; Maps:Initialize()
 assert(Maps.db.extendedZoom==false,"preserve explicit saved zoom preference")
+
+-- Regression: Era's native hit test reads physical cursor coordinates. Scaling
+-- the entire frame shifts continent selection; growing its dimensions must not.
+if era then
+    combat=false; map.maximized=false; map:Show()
+    local cursorMethod=scroll.GetCursorPosition
+    local function NativeEraHitTest(px,py,canvasScale,left,top,width,height)
+        return (px/canvasScale-left)/width,(top-py/canvasScale)/height
+    end
+    for _,factor in ipairs({.6,1,1.3,2,5}) do
+        Maps.db.scale=factor; Maps:ApplyWindow()
+        assert(map:GetEffectiveScale()==Maps.originalScale)
+        assert(math.abs(map:GetWidth()-Maps.originalWidth*factor)<.00001)
+        for _,canvasScale in ipairs({.75,1,2,4}) do
+            for _,point in ipairs({{.22,.4},{.75,.52}}) do
+                local left,top,width,height=90,850,1000,668
+                local px=(left+point[1]*width)*canvasScale*map:GetEffectiveScale()
+                local py=(top-point[2]*height)*canvasScale*map:GetEffectiveScale()
+                local hx,hy=NativeEraHitTest(px,py,canvasScale,left,top,width,height)
+                assert(math.abs(hx-point[1])<.00001 and math.abs(hy-point[2])<.00001,
+                    'visible continent and native click position must agree after resize')
+            end
+        end
+        assert(scroll.GetCursorPosition==cursorMethod,'never replace protected native cursor methods')
+    end
+    Maps:ResetMap()
+    assert(map:GetWidth()==Maps.originalWidth and map:GetHeight()==Maps.originalHeight)
+end
+
+if era then
+    -- Native viewport rebuilds recreate the fit zoom. Keep relative zoom while
+    -- resizing, and avoid resetting it again on ordinary settings refreshes.
+    combat=false; map.maximized=false; map:Show()
+    local rebuilds=0
+    function map:OnFrameSizeChanged()
+        rebuilds=rebuilds+1
+        local fit=self:GetWidth()/Maps.originalWidth
+        scroll.zoomLevels={{scale=fit,layerIndex=1},{scale=2*fit,layerIndex=1}}
+        scroll.currentScale=fit
+    end
+    Maps.db.scale=1; Maps:ApplyWindow()
+    scroll.zoomLevels={{scale=1,layerIndex=1},{scale=2,layerIndex=1}}
+    scroll.currentScale=3
+    Maps.db.extendedZoom=true; Maps.db.scale=2; Maps:ApplyWindow()
+    assert(rebuilds==1 and scroll.currentScale==6 and Maps.extraZoomScale==6)
+    Maps:ApplyWindow(); assert(rebuilds==1,'unchanged dimensions must not rebuild/reset zoom')
+    combat=true; Maps.db.scale=3; Maps:ApplyWindow()
+    assert(rebuilds==1 and map:GetWidth()==2*Maps.originalWidth)
+    combat=false; Maps:Refresh()
+    assert(rebuilds==2 and scroll.currentScale==9)
+    Maps:ResetMap(); assert(map:GetWidth()==Maps.originalWidth)
+end
+
+if era then
+    combat=false; map.maximized=false; map:Show()
+    for _,factor in ipairs({.6,1,1.3,2,5}) do
+        Maps.db.scale=factor; Maps:ApplyWindow()
+        assert(map:GetScale()==Maps.originalScale,'canvas coordinate scale must stay native')
+        assert(map.MiniBorderFrame:GetScale()==factor,'fixed native border artwork must grow with the viewport')
+        assert(WorldMapTitleButton:GetScale()==factor and WorldMapFrameCloseButton:GetScale()==factor)
+        assert(map.MaximizeMinimizeFrame:GetScale()==factor)
+        local topLeft,bottomRight=scroll.points[1],scroll.points[2]
+        assert(topLeft[1]=='TOPLEFT' and topLeft[2]==map and topLeft[4]==20*factor and topLeft[5]==-22*factor)
+        assert(bottomRight[1]=='BOTTOMRIGHT' and bottomRight[2]==map and bottomRight[4]==-10*factor and bottomRight[5]==28*factor)
+        -- XML-fixed border and title sizes now retain their original proportions.
+        assert(MiniBorderLeft:GetWidth()*map.MiniBorderFrame:GetScale()==512*factor)
+        assert(MiniBorderRight:GetWidth()*map.MiniBorderFrame:GetScale()==128*factor)
+        assert(WorldMapTitleButton:GetWidth()*WorldMapTitleButton:GetScale()==544*factor)
+    end
+    map:Maximize()
+    assert(map.MiniBorderFrame:GetScale()==1 and WorldMapFrameCloseButton:GetScale()==1)
+    assert(scroll.points[1][4]==11 and scroll.points[1][5]==-70 and scroll.points[2][5]==28)
+    map:Minimize(); assert(map.MiniBorderFrame:GetScale()==Maps.db.scale)
+    combat=true; local before=map.MiniBorderFrame:GetScale()
+    Maps.db.scale=1.7; Maps:ApplyWindow(); assert(map.MiniBorderFrame:GetScale()==before)
+    combat=false; Maps:Refresh(); assert(map.MiniBorderFrame:GetScale()==1.7)
+    Maps:ResetMap(); assert(map.MiniBorderFrame:GetScale()==1 and WorldMapFrameCloseButton:GetScale()==1)
+    assert(scroll.points[1][4]==20 and scroll.points[2][5]==28)
+end
+
+if era then
+    -- Resize a zoomed/panned canvas using Era's native pan interpolation and
+    -- viewport-dependent scroll getters. Neither repeated resets nor focus
+    -- drift may be hidden by the simpler InstantPanAndZoom fixture above.
+    combat=false; map.maximized=false; Maps.db.scale=1; map:Show(); Maps:ApplyWindow()
+    local fullRebuilds,fitUpdates=0,0
+    local offsetX,offsetY=0,0
+    local canvasWidth,canvasHeight=1000,700
+    local function ViewportWidth()
+        return map:GetWidth()+scroll.points[2][4]-scroll.points[1][4]
+    end
+    local function ViewportHeight()
+        return map:GetHeight()+scroll.points[1][5]-scroll.points[2][5]
+    end
+    function scroll:GetNormalizedHorizontalScroll()
+        return (2*offsetX*self.currentScale+ViewportWidth())/(2*canvasWidth*self.currentScale)
+    end
+    function scroll:GetNormalizedVerticalScroll()
+        return (2*offsetY*self.currentScale+ViewportHeight())/(2*canvasHeight*self.currentScale)
+    end
+    function scroll:CreateZoomLevels()
+        fitUpdates=fitUpdates+1
+        local fit=math.min(ViewportWidth()/canvasWidth,ViewportHeight()/canvasHeight)
+        self.zoomLevels={{scale=fit,layerIndex=1},{scale=fit*2,layerIndex=1}}
+    end
+    function scroll:CalculateScrollExtentsAtScale(scale)
+        local x,y=ViewportWidth()/(2*canvasWidth*scale),ViewportHeight()/(2*canvasHeight*scale)
+        return x,1-x,y,1-y
+    end
+    function scroll:GetCurrentScrollX() return rawget(self,"panX") or rawget(self,"targetX") end
+    function scroll:GetCurrentScrollY() return rawget(self,"panY") or rawget(self,"targetY") end
+    function scroll:SetPanTarget(x,y) self.targetX,self.targetY=x,y end
+    function scroll:MarkCanvasDirty()
+        if self.panX==self.targetX then self.panX=nil end
+        if self.panY==self.targetY then self.panY=nil end
+    end
+    function scroll:InstantPanAndZoom(scale,x,y)
+        assert(not combat)
+        local ratio=self:GetCanvasScale()/scale
+        x=x+((self:GetCurrentScrollX() or .5)-x)*ratio
+        y=y+((self:GetCurrentScrollY() or .5)-y)*ratio
+        local xmin,xmax,ymin,ymax=self:CalculateScrollExtentsAtScale(scale)
+        local function NativeClamp(value,low,high)
+            if value>high then return high elseif value<low then return low end
+            return value
+        end
+        x,y=NativeClamp(x,xmin,xmax),NativeClamp(y,ymin,ymax)
+        self.targetX,self.targetY=x,y
+        self.currentScale,self.panX,self.panY=scale,x,y
+        offsetX=x*canvasWidth-ViewportWidth()/(2*scale)
+        offsetY=y*canvasHeight-ViewportHeight()/(2*scale)
+    end
+    function map:OnFrameSizeChanged()
+        fullRebuilds=fullRebuilds+1
+        scroll:CreateZoomLevels()
+        scroll.currentScale=scroll.zoomLevels[1].scale
+        scroll.panX,scroll.panY=.5,.5
+    end
+    scroll:CreateZoomLevels()
+    scroll.currentScale=scroll.zoomLevels[1].scale*3
+    scroll.panX,scroll.panY=.73,.32
+    offsetX=.73*1000-ViewportWidth()/(2*scroll.currentScale)
+    offsetY=.32*700-ViewportHeight()/(2*scroll.currentScale)
+    local held=true
+    function IsMouseButtonDown(button) assert(button=='LeftButton'); return held end
+    cursorX,cursorY=200,200
+    Maps.resizeGrip.scripts.OnMouseDown(Maps.resizeGrip,'LeftButton')
+    assert(Maps.resizing and Maps.resizeView)
+    for i=1,12 do
+        cursorX,cursorY=200+i*30,200-i*20
+        Maps.resizeGrip.scripts.OnUpdate()
+        assert(fullRebuilds==0,'resize must not reset canvas/providers on each mouse move')
+        assert(math.abs(scroll.currentScale/scroll.zoomLevels[1].scale-3)<.000001)
+        assert(math.abs(scroll:GetNormalizedHorizontalScroll()-.73)<.000001)
+        assert(math.abs(scroll:GetNormalizedVerticalScroll()-.32)<.000001)
+    end
+    assert(Maps.viewportRebuildPending and fitUpdates==13)
+    held=false; Maps.resizeGrip.scripts.OnUpdate() -- release outside the grip
+
+    assert(not Maps.resizing and not Maps.resizeView and not Maps.viewportRebuildPending)
+    assert(fitUpdates==14 and fullRebuilds==0)
+    assert(math.abs(scroll.panX-.73)<.000001 and math.abs(scroll.panY-.32)<.000001,
+        'releasing the corner must not recenter the zoomed view')
+    Maps.resizeGrip.scripts.OnMouseUp(); assert(fitUpdates==14)
+    held=true
+    Maps.resizeGrip.scripts.OnMouseDown(Maps.resizeGrip,'LeftButton')
+    cursorX,cursorY=cursorX+50,cursorY-30; Maps.resizeGrip.scripts.OnUpdate()
+    combat=true; local before=fitUpdates; Maps:FinishResize()
+    assert(not Maps.resizing and fitUpdates==before and Maps.viewportRebuildPending)
+    combat=false; Maps:Refresh(); assert(not Maps.viewportRebuildPending and fitUpdates==before+1)
+
+    -- At fit zoom the letterboxed axis has inverted native scroll bounds.
+    -- Native Clamp branches (rather than sorting these bounds): repeated calls
+    -- used to alternate between the opposite edges when shrinking the window.
+    for _,dimensions in ipairs({{1000,700},{1000,600},{1000,668}}) do
+        canvasWidth,canvasHeight=dimensions[1],dimensions[2]
+        scroll:CreateZoomLevels()
+        scroll.currentScale=scroll.zoomLevels[1].scale
+        scroll.panX,scroll.panY=.5,.5
+        scroll:InstantPanAndZoom(scroll.currentScale,.5,.5)
+        cursorX,cursorY=500,500; held=true
+        Maps.resizeGrip.scripts.OnMouseDown(Maps.resizeGrip,'LeftButton')
+        for _,delta in ipairs({-20,-40,-60,-80,-100,-80,-60,-40,0,30,60}) do
+            cursorX,cursorY=500+delta,500-delta
+            Maps.resizeGrip.scripts.OnUpdate()
+            local xmin,xmax,ymin,ymax=scroll:CalculateScrollExtentsAtScale(scroll.currentScale)
+            assert(xmin>xmax or ymin>ymax,'fixture must exercise a letterboxed fit axis')
+            local expectedX=xmin>xmax+.0000001 and xmax or .5
+            local expectedY=ymin>ymax+.0000001 and ymax or .5
+            assert(math.abs(scroll.panX-expectedX)<.000001 and math.abs(scroll.panY-expectedY)<.000001,
+                'fully zoomed out resize must keep the same native edge, without alternating')
+        end
+        held=false; Maps.resizeGrip.scripts.OnUpdate()
+        -- Native full-step wheel handling does nothing when already at fit.
+        -- Our post-hook must likewise leave both scale and pan untouched.
+        scroll.overview='native-minimum-noop'
+        Maps.extraZoomScale=nil; Maps.db.extendedZoom=true
+        local beforeX,beforeY=scroll.panX,scroll.panY
+        local beforeScale=scroll.currentScale
+        for i=1,20 do
+            Wheel(-1)
+            assert(scroll.currentScale==beforeScale and scroll.panX==beforeX and scroll.panY==beforeY,
+                'scrolling outward at minimum must not reapply native pan/clamp')
+        end
+        Wheel(1); assert(scroll.currentScale>beforeScale,'zoom in must still work after hitting minimum')
+        scroll.overview=nil
+    end
+    print('PASS: outward wheel events at fit zoom do not move the canvas; zoom in remains available.')
+    print('PASS: fully zoomed out resize remains stable with native inverted extents and Clamp branches.')
+end

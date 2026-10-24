@@ -25,6 +25,15 @@ function Maps:InstallZoom(scroll)
         local scale = self.extraZoomScale or scroll:GetCanvasScale()
         local minimum=scroll.zoomLevels[1].scale
         diagnostic.scale,diagnostic.maximum,diagnostic.minimum=scale,maximum,minimum
+        -- At the lower limit no zoom remains to apply. Repeating Era's native
+        -- pan/clamp at the same scale can alternate its letterboxed edges.
+        -- Check the native scale too: an extra zoom may still need restoring
+        -- after the original wheel handler has changed the canvas scale.
+        if delta<0 and scale<=minimum+.000001 and scroll:GetCanvasScale()<=minimum+.000001 then
+            self.extraZoomScale=nil
+            diagnostic.reason,diagnostic.target,diagnostic.after="minimum",minimum,scroll:GetCanvasScale()
+            return
+        end
         -- Own the full enabled zoom range. Waiting for native maximum leaves
         -- maps with inactive native wheel zoom permanently stuck at minimum.
         local target = math.max(minimum, math.min(maximum * 4, scale * 1.25 ^ delta))

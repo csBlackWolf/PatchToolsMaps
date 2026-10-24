@@ -1,11 +1,7 @@
 # Build and release planning
 
-Before every build push or release/tag push:
+Check GitHub issues and the shared planning board only when the user explicitly requests it. The user reviews planned ideas themselves; issue review and a separate confirmation after that review are not prerequisites for a build push or release.
 
-1. Read the current open GitHub issues for this repository and the shared planning board: https://github.com/users/csBlackWolf/projects/9 . Check both repositories when preparing a joint build. Read live data; do not rely on an old snapshot.
-2. Identify accepted/planned ideas: Planned, In Progress and Next release. Reviewed only means read, not accepted. List Deferred items separately. The board is authoritative; label synchronization runs about every 15 minutes and may lag. Read the board directly and flag discrepancies rather than relying on labels alone.
-3. Report the number, titles and links of these ideas to the user, with Next release separately highlighted. State which are included in the proposed build and which are not. If access fails, say so; do not report zero.
-4. Wait for explicit confirmation before pushing that build, tag or release, so the user can choose whether to include another idea first. Do not automatically implement ideas just because they are planned. If there are no accepted/planned ideas, explicitly report zero and still obtain confirmation for the build push.
-5. A Deferred idea remains accepted but postponed; it is not a promise for the next release. Revisit it when planning, without silently moving it back.
+When the user requests a planning review, read live data. Treat the board as authoritative: Planned, In Progress and Next release are accepted work; Reviewed only means read. Report Deferred items separately. Do not implement or reschedule ideas without user authorization.
 
-This gate applies to build/publication pushes. Routine documentation and planning automation updates do not require a release or a new build tag. Never create a test release merely to exercise the planning workflow.
+Publish builds and releases within the scope authorized by the user. Never create a test release merely to exercise planning or publishing automation.

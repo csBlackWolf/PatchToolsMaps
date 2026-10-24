@@ -1,3 +1,13 @@
+# PatchToolsMaps 0.2.1 — 2026-10-24
+
+- Fix Classic Era map clicks and continent highlights drifting away from the mouse pointer after resizing.
+- Keep the map artwork, border and controls aligned as the window grows or shrinks.
+- Preserve the current zoom and map position while resizing, without repeatedly resetting the view.
+- Fix map content shaking during fully zoomed-out resizing and when scrolling outward at the minimum zoom.
+- Finish interrupted resize gestures safely, including mouse release outside the corner and entering combat.
+
+Validation: Classic Era gameplay checks confirmed correct map selection and smooth resizing, including fully zoomed-out views and repeated outward scrolling. Automated Era/Forever integration checks pass in English, German and English fallback. Forever Beta is closed and could not be retested in game; the window layout correction is specific to Era. Existing settings and map catalogs are preserved.
+
 # PatchToolsMaps 0.2.0 — 2026-10-23
 
 - Support Classic Era 1.15.9 and Forever 1.60.1 in one package, with separate client map catalogs selected by build.

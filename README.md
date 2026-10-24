@@ -55,6 +55,13 @@ Track progress through the issue labels: new, reviewed, planned, in progress, ne
 
 ## Changelog
 
+### 2026-10-24 — 0.2.1
+
+- Fix map clicks and highlights after resizing in Classic Era.
+- Keep the map, frame and controls aligned while changing the window size.
+- Preserve zoom and position when resizing; stop shaking at the smallest zoom.
+- Handle resize release outside the corner and combat interruptions safely.
+
 ### 2026-10-23 — 0.2.0
 
 - Add Classic Era support with its own map catalog.

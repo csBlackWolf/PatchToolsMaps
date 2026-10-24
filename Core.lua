@@ -95,7 +95,7 @@ events:SetScript("OnEvent",function(_,event,name)
     elseif Maps.initialized then
         if event=="PLAYER_REGEN_DISABLED" then
             if Maps.resizeGrip then
-                Maps.resizeGrip:SetScript("OnUpdate",nil)
+                Maps:FinishResize()
                 Maps.moveDriver:SetScript("OnUpdate",nil); Maps.moving=nil; Maps.extraZoomScale=nil
             end
         elseif event=="ADDON_LOADED" then Maps:Attach()

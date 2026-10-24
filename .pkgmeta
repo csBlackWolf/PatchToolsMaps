@@ -8,6 +8,7 @@ ignore:
   - .gitattributes
   - .pkgmeta
   - README.md
+  - ALPHA-FRAME.md
   - DEVELOPMENT.md
   - .github
   - tests

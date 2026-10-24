@@ -16,8 +16,9 @@ function Maps:ApplyEraChrome(factor,maximized)
     -- Era's small border is two fixed-size textures, not a stretchable frame.
     -- Scale only the decorative header/border and its controls. The map canvas
     -- remains in the native coordinate space used by continent hit testing.
+    local custom=self.customFrame and self:UseCustomFrame()
     for _,entry in ipairs(self.eraChrome) do
-        local scale=entry.scale*factor
+        local scale=entry.scale*(custom and 1 or factor)
         if math.abs(entry.frame:GetScale()-scale)>.00001 then entry.frame:SetScale(scale) end
     end
     local scroll=self.map.ScrollContainer
@@ -25,6 +26,7 @@ function Maps:ApplyEraChrome(factor,maximized)
     local inset=self.eraInsets
     local left,top=inset[1]*factor,inset[2]*factor
     local right,bottom=inset[3]*factor,inset[4]*factor
+    if custom then left,top,right,bottom=8,-70,-8,60 end
     if maximized then left,top,right,bottom=11,-70,inset[3],inset[4] end
     local matched=0
     for i=1,scroll:GetNumPoints() do
@@ -139,6 +141,7 @@ function Maps:ApplyWindow()
     map:SetClampedToScreen(false)
     if self.ownsDragBar then self.dragBar:SetShown(self.db.movable) end
     self.resizeGrip:SetShown(self.db.resizable)
+    if self.customFrame then self:LayoutCustomFrame() end
     if self.eraChrome and (resized or (self.viewportRebuildPending and not self.resizing)) then
         self:RefreshEraViewport(view)
     end
@@ -240,6 +243,10 @@ function Maps:InstallWindow(map)
         self:ApplyWindow()
     end
     bar:HookScript("OnDragStop",Stop)
+    if self.customHeader then
+        self.customHeader:HookScript("OnDragStart",Start)
+        self.customHeader:HookScript("OnDragStop",Stop)
+    end
     local grip=CreateFrame("Button",nil,map)
     self.resizeGrip=grip
     grip:Hide()
@@ -292,6 +299,7 @@ function Maps:InstallWindow(map)
                         else map:OnFrameSizeChanged() end
                         self.viewportRebuildPending=nil
                     end
+                    if self.customFrame then self:LayoutCustomFrame() end
                 end
             else self:Refresh() end
         end) end

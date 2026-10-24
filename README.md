@@ -1,5 +1,7 @@
 # PatchToolsMaps
 
+**Experimental branch: custom Classic Era frame, 0.3.0-alpha.1.** See [alpha test notes](ALPHA-FRAME.md) for scope and controls. The stable release remains 0.2.1.
+
 Optional world map tools for **World of Warcraft: Forever and Classic Era**, with built-in **English and German** language support. Made by **Patch & Zen**.
 
 **Requires [PatchTools](https://www.curseforge.com/wow/addons/patchtools).** Adds a **Map** section to the PatchTools settings.

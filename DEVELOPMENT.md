@@ -63,6 +63,10 @@ Era 11509 and Forever 16001 share runtime code. XML-bound OnMouseWheel/OnMouseUp
 
 Era 70003 now has a separate generated catalog and CATALOG-MANIFEST-ERA.json. One inconsistent overlay is omitted; native display remains there. Defaults apply only to absent/invalid settings, preserving saved false values. Combat game checks passed in Era; the latest Forever gameplay retest is unavailable while Beta is closed.
 
-## Required idea review before a build push
+## Release planning
 
-Follow [the build planning rules](AGENTS.md). Review current GitHub ideas and the [shared board](https://github.com/users/csBlackWolf/projects/9), report accepted/planned items with counts, titles and links, and highlight the next-release items. List deferred ideas separately. Wait for confirmation before pushing a build or release, so another idea can still be included. This is a planning checkpoint, not automatic implementation of feature requests.
+Check GitHub issues and the planning board only when the user requests it. See [AGENTS.md](AGENTS.md) for the current publication rules.
+
+## Custom frame alpha
+
+See [ALPHA-FRAME.md](ALPHA-FRAME.md) for adapter sources, the optional widget API and the test checklist. Frame.lua owns only chrome and explicitly registered widgets. Window.lua retains the stable native map coordinate system and selects fixed custom-frame insets while the Era alpha is active. The standard layout remains available from options; Forever retains its tested layout.

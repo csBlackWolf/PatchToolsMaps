@@ -1,3 +1,15 @@
+# PatchToolsMaps 0.3.0-alpha.1 — 2026-10-24
+
+Experimental custom Classic Era frame on the alpha/custom-map-frame branch. Stable 0.2.1 remains unchanged.
+
+- Separate the map title, addon button toolbar and coordinate/info footer.
+- Dock existing Questie, ATT and MapNotes buttons from Krowi WorldMapButtons, and SilverDragon's world-map button. Preserve their scripts and visibility preferences.
+- Add player/cursor coordinates using game map APIs, and a widget registration API for optional fixed addon information.
+- Restore original widget parents and anchors when disabling the custom frame or maximizing the map. Defer layout changes during combat.
+- Keep geographic addon pins and Nova timer labels on the original canvas. Keep Forever's native frame for now.
+
+Validation: automated Era/Forever regression checks in English, German and English fallback. The new frame and installed addon combinations still need in-game validation. See ALPHA-FRAME.md.
+
 # PatchToolsMaps 0.2.1 — 2026-10-24
 
 - Fix Classic Era map clicks and continent highlights drifting away from the mouse pointer after resizing.

@@ -31,6 +31,7 @@ function Maps:BuildOptions(parent)
     end
     Label(parent,self:T("VISUAL"),-393)
     Label(parent,self:T("STATUS",tostring(select(2,GetBuildInfo()))),-425)
+    if PatchTools.isClassicEra then Check("customFrame","CUSTOM_FRAME",-451) end
     local reset=CreateFrame("Button",nil,parent,"UIPanelButtonTemplate")
     reset:SetPoint("TOPLEFT",0,-487); reset:SetSize(350,27); reset:SetText(self:T("RESET"))
     local scale=Label(parent,"",-535)

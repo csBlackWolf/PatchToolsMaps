@@ -6,6 +6,7 @@ end
 function Maps:Refresh(rebuildZoom)
     if rebuildZoom then self.zoomPending=true end
     if not self.map then self:Attach(); return end
+    if self.customFrame and not (InCombatLockdown and InCombatLockdown()) then self:DiscoverFrameWidgets() end
     if self.resetPending then self:ResetWindow() else self:ApplyWindow() end
     if self.zoomPending and not (InCombatLockdown and InCombatLockdown()) and self.map:IsShown()
         and self.map.ScrollContainer and type(self.map.ScrollContainer.zoomLevels)=="table"
@@ -35,6 +36,7 @@ end
 function Maps:Attach()
     if self.map or (InCombatLockdown and InCombatLockdown()) or not WorldMapFrame or not WorldMapFrame.GetCanvas then return end
     self.map=WorldMapFrame
+    self:InstallCustomFrame(self.map)
     self:InstallWindow(self.map)
     local function Reveal() self.extraZoomScale=nil; self:RefreshReveal() end
     for _,method in ipairs({"OnMapChanged","OnCanvasSizeChanged"}) do
@@ -63,6 +65,7 @@ function Maps:Initialize()
     for key,value in pairs({movable=true,resizable=true,extendedZoom=true,scale=1,mode="mist"}) do
         if type(self.db[key])~=type(value) then self.db[key]=value end
     end
+    if type(self.db.customFrame)~="boolean" then self.db.customFrame=PT.isClassicEra==true end
     if self.db.mode~="classic" and self.db.mode~="mist" and self.db.mode~="full" then self.db.mode="mist" end
     local scale=self.db.scale
     self.db.scale=scale==scale and scale<math.huge and math.max(.6,scale) or 1
@@ -98,7 +101,11 @@ events:SetScript("OnEvent",function(_,event,name)
                 Maps:FinishResize()
                 Maps.moveDriver:SetScript("OnUpdate",nil); Maps.moving=nil; Maps.extraZoomScale=nil
             end
-        elseif event=="ADDON_LOADED" then Maps:Attach()
+        elseif event=="ADDON_LOADED" then
+            Maps:Attach()
+            if Maps.customFrame and not (InCombatLockdown and InCombatLockdown()) then
+                Maps:DiscoverFrameWidgets(); Maps:LayoutCustomFrame()
+            end
         elseif event=="PLAYER_REGEN_ENABLED" or event=="DISPLAY_SIZE_CHANGED" then Maps:Refresh()
         elseif event=="MAP_EXPLORATION_UPDATED" then Maps:RefreshReveal() end
     end

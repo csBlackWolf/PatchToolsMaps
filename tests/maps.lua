@@ -21,6 +21,12 @@ local function Widget(parent)
     function methods:ClearAllPoints() self.points={} end
     function methods:GetNumPoints() return #self.points end
     function methods:GetPoint(i) return unpack(self.points[i]) end
+    function methods:GetParent() return self.parent end
+    function methods:SetParent(parent) self.parent=parent end
+    function methods:GetName() return rawget(self,"name") end
+    function methods:IsProtected() return rawget(self,"protected")==true end
+    function methods:GetAlpha() return rawget(self,"alpha") or 1 end
+    function methods:IsMouseOver() return false end
     function methods:GetScale() return self.scale end
     function methods:SetScale(s) self.scale=s end
     function methods:SetClampedToScreen(v) self.clamped=v end
@@ -112,8 +118,9 @@ assert(PT.optionNavigation.maps.points[1][3]>PT.optionNavigation.about.points[1]
 local placeholder=PT.mapsPlaceholder
 PT:SelectOptionsPage('general')
 assert(PT:SelectOptionsPage('missing')==false and PT.optionPages.general:IsShown())
+PatchToolsMapsDB={customFrame=false}
 local Maps={}
-for _,name in ipairs({'Locales.lua','OverlayData.lua','GeneratedCatalog.lua','GeneratedCatalogEra.lua','Reveal.lua','Zoom.lua','Window.lua','Options.lua','Core.lua'}) do
+for _,name in ipairs({'Locales.lua','OverlayData.lua','GeneratedCatalog.lua','GeneratedCatalogEra.lua','Reveal.lua','Zoom.lua','Frame.lua','Window.lua','Options.lua','Core.lua'}) do
     assert(loadfile(MAPS_PATH..name))('PatchToolsMaps',Maps)
 end
 Event('ADDON_LOADED','PatchToolsMaps')
@@ -654,4 +661,59 @@ if era then
     end
     print('PASS: outward wheel events at fit zoom do not move the canvas; zoom in remains available.')
     print('PASS: fully zoomed out resize remains stable with native inverted extents and Clamp branches.')
+end
+
+-- Alpha chrome: original button handlers/visibility survive docking, library
+-- relayouts and disabling; protected frames and combat mutations are rejected.
+if era then
+    combat=false; map.maximized=false; Maps.db.scale=1; map:Show()
+    C_Map.GetMapInfo=function(id) return {name='Test zone',mapID=id} end
+    C_Map.GetBestMapForUnit=function() return 1453 end
+    C_Map.GetPlayerMapPosition=function() return {GetXY=function() return .42,.61 end} end
+    local questie=Widget(scroll); questie.name='Krowi_WorldMapButtons1'; questie:SetSize(36,36)
+    questie:SetPoint('TOPRIGHT',map,'TOPRIGHT',-4,-2)
+    local hidden=Widget(scroll); hidden.name='Krowi_WorldMapButtons2'; hidden:SetSize(36,36); hidden:Hide()
+    local silver=Widget(map); silver:SetSize(20,20)
+    local native=Widget(map); native.name='BlizzardTrackingButton'
+    local clicks=0
+    questie:SetScript('OnClick',function() clicks=clicks+1 end)
+    local handler=questie.scripts.OnClick
+    local library={Buttons={questie,hidden,native},SetPoints=function() questie:ClearAllPoints(); questie:SetPoint('TOPRIGHT',map,'TOPRIGHT',-4,-2) end}
+    LibStub=function(name)
+        if name=='Krowi_WorldMapButtons-1.4' then return library end
+        if name=='AceAddon-3.0' then return {GetAddon=function(_,addon)
+            assert(addon=='SilverDragon')
+            return {GetModule=function(_,module) assert(module=='LDB'); return {worldmap=silver} end}
+        end} end
+    end
+    Maps.db.customFrame=true; Maps:Refresh()
+    assert(Maps.customFrame:IsShown() and map:GetScale()==Maps.originalScale)
+    assert(scroll.points[1][4]==8 and scroll.points[1][5]==-70 and scroll.points[2][5]==60)
+    assert(questie:GetParent()==Maps.customFrame.buttons and silver:GetParent()==Maps.customFrame.buttons)
+    assert(hidden:GetParent()==Maps.customFrame.buttons and not hidden:IsShown(),'respect addon visibility preferences')
+    assert(native:GetParent()==map,'do not adopt native overlay buttons')
+    assert(questie.scripts.OnClick==handler); questie.scripts.OnClick(); assert(clicks==1)
+    library.SetPoints(); assert(questie.points[1][2]==Maps.customFrame.buttons,'library relayout must return to dock')
+    Maps:UpdateFrameCoordinates(); assert(Maps.customFrame.coordinates:GetText():find('42.0, 61.0',1,true))
+    local protected=Widget(map); protected.protected=true
+    assert(not Maps:RegisterFrameWidget('protected',protected,'buttons'))
+    assert(not Maps:RegisterFrameWidget('invalid',questie,'invalid'))
+    assert(not Maps:RegisterFrameWidget('duplicate',questie,'buttons'))
+    local info=Widget(map); info:SetPoint('CENTER',map,'CENTER',0,0)
+    assert(Maps:RegisterFrameWidget('Timer test',info,'info-right'))
+    Maps:LayoutCustomFrame(); assert(info:GetParent()==Maps.customFrame.footer)
+    local before=questie.points[1]
+    combat=true; Maps.db.customFrame=false; Maps:Refresh()
+    assert(Maps.customFrame:IsShown() and questie.points[1]==before,'combat defers all frame/anchor changes')
+    combat=false; Maps:Refresh()
+    assert(not Maps.customFrame:IsShown() and questie:GetParent()==scroll and info:GetParent()==map)
+    assert(questie.scripts.OnClick==handler and not hidden:IsShown())
+    Maps.db.customFrame=true; Maps:Refresh(); map:Maximize()
+    assert(not Maps.customFrame:IsShown() and questie:GetParent()==scroll,'fullscreen restores native widget layout')
+    map:Minimize(); assert(Maps.customFrame:IsShown() and questie:GetParent()==Maps.customFrame.buttons)
+    Maps.db.customFrame=false; Maps:Refresh()
+    LibStub=nil
+    print('PASS: alpha frame docking, original addon callbacks, coordinates, restoration, fullscreen and combat guards.')
+else
+    assert(not Maps.customFrame,'Forever retains its tested native layout during the Era frame alpha')
 end

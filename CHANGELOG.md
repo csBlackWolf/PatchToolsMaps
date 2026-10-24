@@ -1,3 +1,10 @@
+# PatchToolsMaps 0.3.0-alpha.4 — 2026-10-24
+
+- Fix all Nova buff timers appearing on the first map opening after reload, before a relevant buff zone has been viewed.
+- Require a live HereBeDragons map-pin assignment before mirroring a timer; default-shown, unassigned Nova frames no longer count as zone-eligible displays.
+
+Validation: reproduced the fresh-reload state in the integration fixture; it fails with Alpha 3 and passes with this correction. Era/Forever integration checks pass in English, German and English fallback. In-game reload confirmation pending.
+
 # PatchToolsMaps 0.3.0-alpha.3 — 2026-10-24
 
 - Show Nova World Buffs city/world-buff icons and timers in a compact footer row outside the map, following Nova's existing marker visibility and live timer text. Collapse the row when no relevant markers are shown.

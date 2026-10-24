@@ -1,6 +1,6 @@
 local _, Maps = ...
 _G.PatchToolsMaps = Maps
-Maps.version = "0.3.0-alpha.3"
+Maps.version = "0.3.0-alpha.4"
 local en = {
     CUSTOM_FRAME="Own map frame with addon toolbar (Alpha)",
     FRAME_COORDS="Player: %s    |    Cursor: %s",

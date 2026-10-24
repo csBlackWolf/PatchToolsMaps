@@ -770,16 +770,34 @@ if era then
     onyNWBWorldMap=Marker('3h48m'); nefNWBWorldMap=Marker('--')
     nefNWBWorldMap.fs=Widget(nefNWBWorldMap)
     nefNWBWorldMap.fs:SetText('Type /buffs to view all your characters world buffs.')
-    local originalAnchor=onyNWBWorldMap.points[1]
+    -- Fresh reload: Nova creates all marker Frames shown, before HBD has
+    -- acquired a pin for any of them on the currently opened unrelated zone.
     Maps.db.customFrame=true; Maps:Refresh()
     local ony=Maps.novaTimers.onyNWBWorldMap
     local nef=Maps.novaTimers.nefNWBWorldMap
+    assert(not ony.button:IsShown() and not nef.button:IsShown() and Maps.novaRowHeight==0,
+        'first map open must not treat unassigned, default-shown Nova frames as eligible timers')
+    local function AcquireNovaPin(source)
+        local pin=Widget(map); pin.icon=source
+        source:SetParent(pin); source:ClearAllPoints(); source:SetPoint('CENTER',pin,'CENTER',0,0)
+        return pin
+    end
+    local onyPin=AcquireNovaPin(onyNWBWorldMap)
+    Maps:UpdateNovaTimers()
+    assert(ony.button:IsShown() and not nef.button:IsShown(),'only markers assigned to actual map pins are eligible')
+    onyPin:Hide(); Maps:UpdateNovaTimers()
+    assert(not ony.button:IsShown(),'a hidden provider pin must not leave a timer visible')
+    onyPin:Show(); Maps:UpdateNovaTimers()
+    assert(ony.button:IsShown())
+    AcquireNovaPin(nefNWBWorldMap)
+    local originalAnchor=onyNWBWorldMap.points[1]
+    Maps:Refresh()
     assert(ony.button:IsShown() and nef.button:IsShown() and Maps.novaRowHeight==24)
     assert(ony.text:GetText()=='3h48m' and nef.text:GetText()=='--','copy Nova timer text, including unknown values')
     assert(onyNWBWorldMap:GetAlpha()==0 and not onyNWBWorldMap:IsMouseEnabled())
     assert(onyNWBWorldMap:IsShown() and onyNWBWorldMap.timerFrame:IsShown(),
         'keep Nova Show/Hide state and original OnUpdate alive')
-    assert(onyNWBWorldMap:GetParent()==map and onyNWBWorldMap.points[1]==originalAnchor,
+    assert(onyNWBWorldMap:GetParent()==onyPin and onyNWBWorldMap.points[1]==originalAnchor,
         'never move or reparent HereBeDragons pins')
     ony.button.scripts.OnMouseDown(ony.button,'LeftButton'); assert(novaClicks==1)
     local oldTooltip=GameTooltip
@@ -817,6 +835,7 @@ if era then
     local oldSource=onyNWBWorldMap
     onyNWBWorldMap=Marker('replacement')
     Maps:Refresh()
+    assert(not Maps.novaTimers.onyNWBWorldMap.button:IsShown(),'a recreated unassigned marker must stay hidden too')
     assert(Maps.novaTimers.onyNWBWorldMap.source==onyNWBWorldMap and oldSource:GetAlpha()==.8,
         'handle Nova recreating a marker without leaving the old source masked')
     Maps.db.customFrame=false; Maps:Refresh()

@@ -81,9 +81,15 @@ function Maps:UpdateNovaTimers()
                 end
                 source:SetAlpha(0); source:EnableMouse(false)
             end
-            -- Nova owns Show/Hide, including faction, realm/layer, map and
-            -- addon settings. Unknown timers ("--") remain unknown, not estimated.
-            local shown=entry.original and source:IsShown() and source.timerFrame:IsShown()
+            -- Fresh Nova frames start shown even when no pin has been assigned
+            -- on this map. HBD's OnAcquired sets parent.icon and reparents the
+            -- source; OnReleased clears that link and hides the source. Require
+            -- that actual assignment instead of mistaking default Show for a
+            -- completed zone/faction/layer/settings visibility decision.
+            local pin=source:GetParent()
+            local assigned=pin and pin.icon==source and pin:IsShown()
+            -- Unknown timers ("--") remain unknown, not estimated.
+            local shown=entry.original and assigned and source:IsShown() and source.timerFrame:IsShown()
             entry.button:SetShown(shown and true or false)
             if shown then
                 entry.icon:SetTexture(source.texture:GetTexture())

@@ -1,3 +1,19 @@
+# PatchToolsMaps 0.3.0-alpha.3 — 2026-10-24
+
+- Show Nova World Buffs city/world-buff icons and timers in a compact footer row outside the map, following Nova's existing marker visibility and live timer text. Collapse the row when no relevant markers are shown.
+- Show Nova's complete /buffs hint as a wrapped tooltip on each footer buff icon instead of the clipped map text. Forward clicks to the original Nova action.
+- Preserve original pin anchors, parents and Show/Hide logic; restore the original presentation when disabling the frame or maximizing the map. Defer original-frame changes during combat.
+
+Validation: automated source-visibility, timer text, tooltip, click, layer, pin preservation, restoration and combat checks in addition to Era/Forever regressions. Gameplay verification pending.
+
+# PatchToolsMaps 0.3.0-alpha.2 — 2026-10-24
+
+- Combine the title and addon buttons into one compact header; scale toolbar buttons down to fit.
+- Use a thin border and a single coordinate footer row. Reserve additional info space only for registered widgets.
+- Fit window height to the map artwork aspect ratio so fully zoomed-out maps use the viewport without a side panel; refit after changing maps.
+
+Validation: automated Era/Forever checks, compact geometry at multiple window sizes and art aspect ratios, original button callbacks and scale restoration. In-game appearance still needs confirmation.
+
 # PatchToolsMaps 0.3.0-alpha.1 — 2026-10-24
 
 Experimental custom Classic Era frame on the alpha/custom-map-frame branch. Stable 0.2.1 remains unchanged.

@@ -1,9 +1,11 @@
 local _, Maps = ...
 _G.PatchToolsMaps = Maps
-Maps.version = "0.3.0-alpha.1"
+Maps.version = "0.3.0-alpha.3"
 local en = {
     CUSTOM_FRAME="Own map frame with addon toolbar (Alpha)",
     FRAME_COORDS="Player: %s    |    Cursor: %s",
+    NOVA_LAYER="Layer %s", NOVA_OPEN="Type /buffs to view your characters' world buffs.",
+    NOVA_CLICK="Click to open the Nova World Buffs overview.",
     TITLE="Map", INTRO="PatchToolsMaps · Changes affect only the world map display.",
     MOVABLE="Move the map window", RESIZE="Resize with the bottom-right corner handle",
     WINDOW_HINT="Drag the existing title bar; resize at the corner. No size cap or screen-edge limit. Reset: /ptmaps reset.",
@@ -19,6 +21,8 @@ local en = {
 local de = {
     CUSTOM_FRAME="Eigener Kartenrahmen mit Addon-Leiste (Alpha)",
     FRAME_COORDS="Spieler: %s    |    Maus: %s",
+    NOVA_LAYER="Layer %s", NOVA_OPEN="Gib /buffs ein, um die Weltbuffs deiner Charaktere anzuzeigen.",
+    NOVA_CLICK="Klicken, um die Übersicht von Nova World Buffs zu öffnen.",
     TITLE="Karte", INTRO="PatchToolsMaps · Änderungen betreffen nur die Weltkartenanzeige.",
     MOVABLE="Kartenfenster frei verschieben", RESIZE="Größe am Eckgriff unten rechts ändern",
     WINDOW_HINT="Vorhandene Titelleiste ziehen; an der Ecke vergrößern. Ohne Größen- und Bildschirmgrenze. Reset: /ptmaps reset.",

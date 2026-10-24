@@ -42,6 +42,13 @@ function Maps:Attach()
     for _,method in ipairs({"OnMapChanged","OnCanvasSizeChanged"}) do
         if type(self.map[method])=="function" then hooksecurefunc(self.map,method,Reveal) end
     end
+    if self.customFrame and type(self.map.OnMapChanged)=="function" then
+        hooksecurefunc(self.map,"OnMapChanged",function()
+            C_Timer.After(0,function()
+                if self:UseCustomFrame() and self.map:IsShown() then self:Refresh() end
+            end)
+        end)
+    end
     if type(self.map.RefreshMaskableTextures)=="function" then
         hooksecurefunc(self.map,"RefreshMaskableTextures",function() self:UpdateRevealMasks() end)
     end

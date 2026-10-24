@@ -27,6 +27,10 @@ local function Widget(parent)
     function methods:IsProtected() return rawget(self,"protected")==true end
     function methods:GetAlpha() return rawget(self,"alpha") or 1 end
     function methods:IsMouseOver() return false end
+    function methods:IsMouseEnabled() return rawget(self,"mouse")==true end
+    function methods:EnableMouse(value) self.mouse=value end
+    function methods:GetScript(key) return self.scripts[key] end
+    function methods:GetTexture() return rawget(self,"texture") end
     function methods:GetScale() return self.scale end
     function methods:SetScale(s) self.scale=s end
     function methods:SetClampedToScreen(v) self.clamped=v end
@@ -120,7 +124,7 @@ PT:SelectOptionsPage('general')
 assert(PT:SelectOptionsPage('missing')==false and PT.optionPages.general:IsShown())
 PatchToolsMapsDB={customFrame=false}
 local Maps={}
-for _,name in ipairs({'Locales.lua','OverlayData.lua','GeneratedCatalog.lua','GeneratedCatalogEra.lua','Reveal.lua','Zoom.lua','Frame.lua','Window.lua','Options.lua','Core.lua'}) do
+for _,name in ipairs({'Locales.lua','OverlayData.lua','GeneratedCatalog.lua','GeneratedCatalogEra.lua','Reveal.lua','Zoom.lua','Nova.lua','Frame.lua','Window.lua','Options.lua','Core.lua'}) do
     assert(loadfile(MAPS_PATH..name))('PatchToolsMaps',Maps)
 end
 Event('ADDON_LOADED','PatchToolsMaps')
@@ -682,16 +686,38 @@ if era then
     LibStub=function(name)
         if name=='Krowi_WorldMapButtons-1.4' then return library end
         if name=='AceAddon-3.0' then return {GetAddon=function(_,addon)
-            assert(addon=='SilverDragon')
+            if addon~='SilverDragon' then return nil end
             return {GetModule=function(_,module) assert(module=='LDB'); return {worldmap=silver} end}
         end} end
     end
     Maps.db.customFrame=true; Maps:Refresh()
     assert(Maps.customFrame:IsShown() and map:GetScale()==Maps.originalScale)
-    assert(scroll.points[1][4]==8 and scroll.points[1][5]==-70 and scroll.points[2][5]==60)
+    assert(scroll.points[1][4]==4 and scroll.points[1][5]==-36 and scroll.points[2][5]==24)
     assert(questie:GetParent()==Maps.customFrame.buttons and silver:GetParent()==Maps.customFrame.buttons)
     assert(hidden:GetParent()==Maps.customFrame.buttons and not hidden:IsShown(),'respect addon visibility preferences')
     assert(native:GetParent()==map,'do not adopt native overlay buttons')
+    assert(questie:GetHeight()*questie:GetScale()==24,'toolbar icons should fit a single compact header')
+    assert(Maps.customFrame.footer:GetHeight()==14,'empty info slots must not reserve a second footer row')
+    for _,factor in ipairs({.6,1,1.6,3}) do
+        Maps.db.scale=factor; Maps:ApplyWindow()
+        local width=map:GetWidth()+scroll.points[2][4]-scroll.points[1][4]
+        local height=map:GetHeight()+scroll.points[1][5]-scroll.points[2][5]
+        assert(math.abs(width/height-layer.layerWidth/layer.layerHeight)<.000001,
+            'viewport must fit the map art without a blank side panel at any window size')
+        assert(math.abs(map:GetHeight()-height-60)<.000001,'chrome overhead stays at 60 pixels')
+    end
+    Maps.db.scale=1; Maps:ApplyWindow()
+    local originalArtWidth,originalArtHeight=layer.layerWidth,layer.layerHeight
+    for _,dimensions in ipairs({{512,512},{1002,668},{512,256}}) do
+        layer.layerWidth,layer.layerHeight=dimensions[1],dimensions[2]
+        map:OnMapChanged()
+        local width=map:GetWidth()-8
+        local height=map:GetHeight()-60
+        assert(math.abs(width/height-dimensions[1]/dimensions[2])<.000001,
+            'changing maps must refit the compact window to the new map art')
+    end
+    layer.layerWidth,layer.layerHeight=originalArtWidth,originalArtHeight
+    Maps:Refresh()
     assert(questie.scripts.OnClick==handler); questie.scripts.OnClick(); assert(clicks==1)
     library.SetPoints(); assert(questie.points[1][2]==Maps.customFrame.buttons,'library relayout must return to dock')
     Maps:UpdateFrameCoordinates(); assert(Maps.customFrame.coordinates:GetText():find('42.0, 61.0',1,true))
@@ -707,7 +733,7 @@ if era then
     assert(Maps.customFrame:IsShown() and questie.points[1]==before,'combat defers all frame/anchor changes')
     combat=false; Maps:Refresh()
     assert(not Maps.customFrame:IsShown() and questie:GetParent()==scroll and info:GetParent()==map)
-    assert(questie.scripts.OnClick==handler and not hidden:IsShown())
+    assert(questie.scripts.OnClick==handler and not hidden:IsShown() and questie:GetScale()==1)
     Maps.db.customFrame=true; Maps:Refresh(); map:Maximize()
     assert(not Maps.customFrame:IsShown() and questie:GetParent()==scroll,'fullscreen restores native widget layout')
     map:Minimize(); assert(Maps.customFrame:IsShown() and questie:GetParent()==Maps.customFrame.buttons)
@@ -716,4 +742,84 @@ if era then
     print('PASS: alpha frame docking, original addon callbacks, coordinates, restoration, fullscreen and combat guards.')
 else
     assert(not Maps.customFrame,'Forever retains its tested native layout during the Era frame alpha')
+end
+
+if era then
+    combat=false; map.maximized=false; map:Show()
+    local nova={worldBuffMapMarkerTypes={ony={name='Onyxia'},nef={name='Nefarian'}},data={layers={}}}
+    LibStub=function(name)
+        if name=='AceAddon-3.0' then return {GetAddon=function(_,addon)
+            if addon=='NovaWorldBuffs' then return nova end
+        end} end
+    end
+    local novaClicks=0
+    local function Marker(text)
+        local source=Widget(map); source:SetSize(23,23)
+        source:SetAlpha(.8); source:EnableMouse(true)
+        source:SetPoint('CENTER',map,'CENTER',200,-150)
+        source.timerFrame=Widget(source); source.timerFrame.fs=Widget(source.timerFrame)
+        source.timerFrame.fs:SetText(text)
+        source.texture=Widget(source); source.texture:SetTexture(12345)
+        source:SetScript('OnHide',function() source.timerFrame:Hide() end)
+        source:SetScript('OnShow',function() source.timerFrame:Show() end)
+        source:SetScript('OnMouseDown',function(owner,button)
+            assert(owner==source and button=='LeftButton'); novaClicks=novaClicks+1
+        end)
+        return source
+    end
+    onyNWBWorldMap=Marker('3h48m'); nefNWBWorldMap=Marker('--')
+    nefNWBWorldMap.fs=Widget(nefNWBWorldMap)
+    nefNWBWorldMap.fs:SetText('Type /buffs to view all your characters world buffs.')
+    local originalAnchor=onyNWBWorldMap.points[1]
+    Maps.db.customFrame=true; Maps:Refresh()
+    local ony=Maps.novaTimers.onyNWBWorldMap
+    local nef=Maps.novaTimers.nefNWBWorldMap
+    assert(ony.button:IsShown() and nef.button:IsShown() and Maps.novaRowHeight==24)
+    assert(ony.text:GetText()=='3h48m' and nef.text:GetText()=='--','copy Nova timer text, including unknown values')
+    assert(onyNWBWorldMap:GetAlpha()==0 and not onyNWBWorldMap:IsMouseEnabled())
+    assert(onyNWBWorldMap:IsShown() and onyNWBWorldMap.timerFrame:IsShown(),
+        'keep Nova Show/Hide state and original OnUpdate alive')
+    assert(onyNWBWorldMap:GetParent()==map and onyNWBWorldMap.points[1]==originalAnchor,
+        'never move or reparent HereBeDragons pins')
+    ony.button.scripts.OnMouseDown(ony.button,'LeftButton'); assert(novaClicks==1)
+    local oldTooltip=GameTooltip
+    local tooltipLines={}
+    GameTooltip={SetOwner=function() end,SetText=function() end,Show=function() end,
+        AddLine=function(_,text,r,g,b,wrap) tooltipLines[#tooltipLines+1]={text=text,wrap=wrap} end}
+    ony.button.scripts.OnEnter()
+    local foundHint=false
+    for _,line in ipairs(tooltipLines) do
+        if line.text==nefNWBWorldMap.fs:GetText() then foundHint=line.wrap==true end
+    end
+    assert(foundHint,'every mirrored buff icon shows the complete wrapped Nova /buffs hint')
+    GameTooltip=oldTooltip
+    onyNWBWorldMap:Hide(); Maps:UpdateNovaTimers()
+    assert(not ony.button:IsShown() and nef.button:IsShown(),'native zone/faction/settings visibility is authoritative')
+    nefNWBWorldMap:Hide(); Maps.customFrame.scripts.OnUpdate(Maps.customFrame,.2)
+    assert(Maps.novaRowHeight==0,'zones without Nova markers reserve no timer row')
+    onyNWBWorldMap:Show(); Maps.customFrame.scripts.OnUpdate(Maps.customFrame,.2)
+    assert(Maps.novaRowHeight==24 and ony.button:IsShown())
+    combat=true; Maps.db.customFrame=false
+    onyNWBWorldMap.timerFrame.fs:SetText('3h47m'); Maps:UpdateNovaTimers()
+    assert(ony.text:GetText()=='3h47m' and onyNWBWorldMap:GetAlpha()==0,
+        'timer text can keep updating while original restoration waits for combat')
+    combat=false; Maps:Refresh()
+    assert(not ony.button:IsShown() and Maps.novaRowHeight==0)
+    assert(onyNWBWorldMap:GetAlpha()==.8 and onyNWBWorldMap:IsMouseEnabled())
+    assert(onyNWBWorldMap.points[1]==originalAnchor)
+    Maps.db.customFrame=true; Maps:Refresh(); map:Maximize()
+    assert(onyNWBWorldMap:GetAlpha()==.8 and not ony.button:IsShown(),'fullscreen restores the original Nova display')
+    map:Minimize(); assert(onyNWBWorldMap:GetAlpha()==0 and ony.button:IsShown())
+    nova.data.layers[99]={}; ony99NWBWorldMap=Marker('2h10m')
+    Maps:Refresh(); assert(Maps.novaTimers.ony99NWBWorldMap.layer==99,'discover late-created layer timers')
+    nova.data.layers[77]={}; nef77NWBWorldMap=Marker('protected'); nef77NWBWorldMap.protected=true
+    Maps:Refresh(); assert(not Maps.novaTimers.nef77NWBWorldMap,'skip protected source frames')
+    local oldSource=onyNWBWorldMap
+    onyNWBWorldMap=Marker('replacement')
+    Maps:Refresh()
+    assert(Maps.novaTimers.onyNWBWorldMap.source==onyNWBWorldMap and oldSource:GetAlpha()==.8,
+        'handle Nova recreating a marker without leaving the old source masked')
+    Maps.db.customFrame=false; Maps:Refresh()
+    LibStub=nil; onyNWBWorldMap=nil; nefNWBWorldMap=nil; ony99NWBWorldMap=nil; nef77NWBWorldMap=nil
+    print('PASS: Nova source-driven zone/layer visibility, live/unknown timers, click forwarding, no pin movement, restoration and combat deferral.')
 end

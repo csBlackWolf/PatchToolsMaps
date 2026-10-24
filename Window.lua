@@ -26,7 +26,7 @@ function Maps:ApplyEraChrome(factor,maximized)
     local inset=self.eraInsets
     local left,top=inset[1]*factor,inset[2]*factor
     local right,bottom=inset[3]*factor,inset[4]*factor
-    if custom then left,top,right,bottom=8,-70,-8,60 end
+    if custom then left,top,right,bottom=self:GetCustomFrameInsets() end
     if maximized then left,top,right,bottom=11,-70,inset[3],inset[4] end
     local matched=0
     for i=1,scroll:GetNumPoints() do
@@ -117,6 +117,7 @@ function Maps:FinishResize()
 end
 function Maps:ApplyWindow()
     if not self:CanChangeWindow() then return end
+    if self.customFrame then self:UpdateNovaTimers() end
     local map=self.map
     -- Capture before changing the viewport: native normalized scroll getters
     -- depend on its dimensions. Keep one stable snapshot for the entire drag.
@@ -127,6 +128,7 @@ function Maps:ApplyWindow()
         -- Change the viewport dimensions instead of scaling its coordinate space.
         map:SetScale(self.originalScale)
         local width,height=self.originalWidth*self.db.scale,self.originalHeight*self.db.scale
+        if self.customFrame and self:UseCustomFrame() then height=self:GetCustomFrameHeight(width) end
         resized=math.abs(map:GetWidth()-width)>.01 or math.abs(map:GetHeight()-height)>.01
         if resized then map:SetSize(width,height) end
         resized=self:ApplyEraChrome(self.db.scale,false) or resized

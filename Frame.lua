@@ -7,6 +7,31 @@ function Maps:UseCustomFrame()
         and not (self.map.IsMaximized and self.map:IsMaximized())
 end
 
+function Maps:GetCustomFrameInsets()
+    local bottom=24
+    -- Reserve another row only when an addon actually registered fixed info.
+    for _,entry in ipairs(self.frameWidgets or {}) do
+        if entry.slot~="buttons" and entry.frame:IsShown() then
+            bottom=math.max(bottom,28+math.min(32,entry.frame:GetHeight()))
+        end
+    end
+    return 4,-36,-4,bottom+(self.novaRowHeight or 0)
+end
+
+function Maps:GetCustomFrameHeight(width)
+    local left,top,right,bottom=self:GetCustomFrameInsets()
+    local layers=C_Map.GetMapArtLayers(self.map:GetMapID())
+    local art=layers and layers[1]
+    local ratio=(self.originalHeight-50)/(self.originalWidth-30)
+    if art and type(art.layerWidth)=="number" and art.layerWidth>0
+        and type(art.layerHeight)=="number" and art.layerHeight>0 then
+        ratio=art.layerHeight/art.layerWidth
+    end
+    -- Keep the viewport in the map art's aspect ratio. A fixed outer-window
+    -- ratio plus fixed toolbar heights creates a growing letterbox at fit zoom.
+    return (width-left+right)*ratio-top+bottom
+end
+
 local function Allowed(frame)
     return (type(frame)=="table" or type(frame)=="userdata") and type(frame.GetNumPoints)=="function"
         and not (type(frame.IsProtected)=="function" and frame:IsProtected())
@@ -73,23 +98,25 @@ function Maps:InstallCustomFrame(map)
     frame:SetAllPoints(map)
     frame:SetFrameLevel(map:GetFrameLevel()+1)
     frame:EnableMouse(false)
-    frame:SetBackdrop({bgFile="Interface\\Tooltips\\UI-Tooltip-Background",
-        edgeFile="Interface\\Tooltips\\UI-Tooltip-Border",tile=true,tileSize=16,edgeSize=16,
-        insets={left=4,right=4,top=4,bottom=4}})
+    frame:SetBackdrop({bgFile="Interface\\Buttons\\WHITE8X8",
+        edgeFile="Interface\\Tooltips\\UI-Tooltip-Border",edgeSize=10,
+        insets={left=2,right=2,top=2,bottom=2}})
     frame:SetBackdropColor(.055,.045,.035,1)
-    frame:SetBackdropBorderColor(.65,.49,.27,1)
+    frame:SetBackdropBorderColor(.48,.37,.23,1)
     local header=CreateFrame("Button",nil,frame)
-    header:SetPoint("TOPLEFT",8,-5); header:SetPoint("TOPRIGHT",-70,-5)
-    header:SetHeight(25); header:RegisterForDrag("LeftButton")
+    header:SetPoint("TOPLEFT",9,-4)
+    header:SetHeight(26); header:RegisterForDrag("LeftButton")
     self.customHeader=header
     frame.title=header:CreateFontString(nil,"OVERLAY","GameFontNormal")
-    frame.title:SetPoint("CENTER"); frame.title:SetText("PatchToolsMaps")
+    frame.title:SetPoint("LEFT",0,0); frame.title:SetPoint("RIGHT",-4,0)
+    frame.title:SetJustifyH("LEFT"); frame.title:SetText("PatchToolsMaps")
     local dock=CreateFrame("Frame",nil,frame)
-    dock:SetPoint("TOPLEFT",10,-31); dock:SetPoint("TOPRIGHT",-10,-31); dock:SetHeight(36)
+    dock:SetPoint("TOPRIGHT",map,"TOPRIGHT",-70,-4); dock:SetSize(1,26)
     dock:SetFrameLevel(map:GetFrameLevel()+20)
     frame.buttons=dock
+    header:SetPoint("TOPRIGHT",dock,"TOPLEFT",-8,0)
     local footer=CreateFrame("Frame",nil,frame)
-    footer:SetPoint("BOTTOMLEFT",12,9); footer:SetPoint("BOTTOMRIGHT",-24,9); footer:SetHeight(42)
+    footer:SetPoint("BOTTOMLEFT",9,5); footer:SetPoint("BOTTOMRIGHT",-24,5); footer:SetHeight(14)
     footer:SetFrameLevel(map:GetFrameLevel()+20)
     frame.footer=footer
     frame.coordinates=footer:CreateFontString(nil,"OVERLAY","GameFontHighlightSmall")
@@ -112,6 +139,7 @@ function Maps:InstallCustomFrame(map)
         if elapsedTotal<.15 then return end
         elapsedTotal=0
         self:UpdateFrameCoordinates()
+        if self:UpdateNovaTimers() then self:Refresh() end
     end)
 end
 
@@ -143,6 +171,7 @@ function Maps:LayoutCustomFrame()
     if not self.customFrame or self.layingOutFrame or (InCombatLockdown and InCombatLockdown()) then return end
     self.layingOutFrame=true
     local enabled=self:UseCustomFrame()
+    self:UpdateNovaTimers()
     self.customFrame:SetShown(enabled)
     for _,entry in ipairs(self.frameArt) do entry.region:SetAlpha(enabled and 0 or entry.alpha) end
     if enabled then
@@ -159,24 +188,36 @@ function Maps:LayoutCustomFrame()
         end
         self.customControlsPlaced=nil
     end
+    local dockWidth=0
+    if enabled then
+        local _,_,_,bottom=self:GetCustomFrameInsets()
+        self.customFrame.footer:SetHeight(bottom-10)
+        for _,entry in ipairs(self.frameWidgets or {}) do
+            if entry.slot=="buttons" and Allowed(entry.frame) and entry.frame:IsShown() then
+                local scale=math.min(1,24/math.max(1,entry.frame:GetHeight()))
+                dockWidth=dockWidth+entry.frame:GetWidth()*scale+3
+            end
+        end
+        self.customFrame.buttons:SetWidth(math.max(1,dockWidth-3))
+    end
     local index,left,right=0,0,0
     for _,entry in ipairs(self.frameWidgets or {}) do
         if Allowed(entry.frame) then
             if enabled then
                 entry.original=entry.original or Snapshot(entry.frame)
                 local widget=entry.frame
-                widget:SetScale(1)
+                local scale=entry.slot=="buttons" and math.min(1,24/math.max(1,widget:GetHeight())) or 1
+                widget:SetScale(scale)
                 widget:SetParent(entry.slot=="buttons" and self.customFrame.buttons or self.customFrame.footer)
                 widget:ClearAllPoints()
                 if entry.slot=="buttons" then
-                    local width=math.max(20,widget:GetWidth())
-                    widget:SetPoint("LEFT",self.customFrame.buttons,"LEFT",index,0)
-                    if widget:IsShown() then index=index+width+6 end
+                    widget:SetPoint("LEFT",self.customFrame.buttons,"LEFT",index/scale,0)
+                    if widget:IsShown() then index=index+widget:GetWidth()*scale+3 end
                 elseif entry.slot=="info-left" then
-                    widget:SetPoint("BOTTOMLEFT",self.customFrame.footer,"BOTTOMLEFT",left,0)
+                    widget:SetPoint("BOTTOMLEFT",self.customFrame.footer,"BOTTOMLEFT",left,self.novaRowHeight or 0)
                     if widget:IsShown() then left=left+widget:GetWidth()+8 end
                 else
-                    widget:SetPoint("BOTTOMRIGHT",self.customFrame.footer,"BOTTOMRIGHT",-right,0)
+                    widget:SetPoint("BOTTOMRIGHT",self.customFrame.footer,"BOTTOMRIGHT",-right,self.novaRowHeight or 0)
                     if widget:IsShown() then right=right+widget:GetWidth()+8 end
                 end
             elseif entry.original then Restore(entry.original); entry.original=nil end

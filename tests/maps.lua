@@ -136,8 +136,14 @@ assert(loadfile(base..'Extensions.lua'))('PatchTools',PT)
 assert(loadfile(base..'Options.lua'))('PatchTools',PT)
 -- Without the module there are no map controls or navigation entry.
 PT:CreateOptions()
-assert(not PT.optionPages.maps and not PT.optionNavigation.maps)
-assert(PT:SelectOptionsPage('maps')==false)
+local legacyPlaceholder=PT.mapsPlaceholder
+if legacyPlaceholder then
+    assert(PT.optionPages.maps==legacyPlaceholder)
+    PT:SelectOptionsPage('maps'); assert(legacyPlaceholder:IsShown())
+else
+    assert(not PT.optionPages.maps and not PT.optionNavigation.maps)
+    assert(PT:SelectOptionsPage('maps')==false)
+end
 PT:SelectOptionsPage('general')
 assert(PT:SelectOptionsPage('missing')==false and PT.optionPages.general:IsShown())
 PatchToolsMapsDB={customFrame=false}
@@ -149,6 +155,7 @@ Event('ADDON_LOADED','PatchToolsMaps')
 assert(Maps.initialized and Maps.db.mode=='mist' and PT.optionPages.maps)
 assert(Maps.db.extendedZoom==true,'new installations enable map zoom by default')
 assert(PT.optionPages.maps and not PT.mapsPlaceholder)
+if legacyPlaceholder then assert(not legacyPlaceholder:IsShown()) end
 assert(PT.optionNavigation.maps.points[1][3]>PT.optionNavigation.about.points[1][3])
 assert(not PT:RegisterOptionsPage('maps','Duplicate',function() error('duplicate builder ran') end))
 assert(not PT:RegisterOptionsPage('about','Reserved',function() end))

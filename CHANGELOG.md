@@ -1,6 +1,16 @@
 # PatchToolsMaps 0.3.0-alpha.13 — 2026-10-25
 
-- Remove the small close button from the quick transparency popup. Outside clicks, Escape and toggling the zone title continue to dismiss it.
+Alpha preview. **Install together with PatchTools 0.9.0-alpha.13 for the complete settings experience.** Stable PatchToolsMaps 0.2.1 remains unchanged. The module also loads with stable PatchTools 0.8.0, but the matched alpha pair is recommended.
+
+- Modern compact Classic Era map frame by default, with an option to restore the classic frame.
+- A header for addon buttons and a footer for coordinates and zone-relevant Nova World Buffs timers, keeping the map itself clear.
+- Integrations for Questie, ATT, MapNotes, SilverDragon, GuildMap and Deathlog; Deathlog heatmap toggles from a framed header icon.
+- Shared native map transparency for modern/classic frames. Right-click the zone title for a compact slider that prefers placement outside the map and closes on outside clicks.
+- Keep third-party tooltips under their addons' control; position our own header tooltips above the map when possible.
+- A small public map-action and docking API, documented in INTEGRATION.md for other addon authors.
+- Preserve movement, resizing, extended zoom, reveal modes, reset commands and combat deferral from the stable module.
+
+Validation: Era/Forever tests in English, German and English fallback, including stable PatchTools 0.8.0 compatibility; local Classic Era gameplay and visual testing. Forever gameplay retest is unavailable while Beta is closed.
 
 # PatchToolsMaps 0.3.0-alpha.12 — 2026-10-25
 

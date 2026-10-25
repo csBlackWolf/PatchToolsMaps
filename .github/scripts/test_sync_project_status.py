@@ -35,12 +35,30 @@ class ProjectStatusTests(unittest.TestCase):
                     sync.sync_issue("csBlackWolf/PatchTools", 1, state, "issue-token")
                 self.assertTrue(all(call[1] == "issue-token" for call in calls))
                 self.assertFalse(any(call[2] == "DELETE" and "enhancement" in call[0] for call in calls))
-                if desired == "status: reviewed":
-                    self.assertEqual(len(calls), 1)
-                else:
-                    self.assertIn(("/repos/csBlackWolf/PatchTools/issues/1/labels", "issue-token", "POST",
-                                   {"labels": [desired]}), calls)
-                    self.assertTrue(calls[-1][0].endswith("status%3A%20reviewed"))
+                self.assertIn(("/repos/csBlackWolf/PatchTools/issues/1/labels", "issue-token", "POST",
+                               {"labels": [desired]}), calls)
+                self.assertTrue(calls[-1][0].endswith("status%3A%20reviewed"))
+
+    def test_matching_labels_do_not_cause_writes(self):
+        with patch.object(sync, "request", return_value=[{"name":"status: planned"}, {"name":"bug"}]) as api:
+            sync.sync_issue("csBlackWolf/PatchTools", 1, "Planned", "token")
+            self.assertEqual(api.call_count, 1)
+
+    def test_rejection_is_added_and_removed_without_touching_type_labels(self):
+        for state, rejected in (("Done", True), ("New", False), ("Planned", False), ("Done", False)):
+            current = [{"name": name} for name in ("bug", "status: next release", "wontfix")]
+            with self.subTest(state=state, rejected=rejected), patch.object(sync, "request") as api:
+                api.side_effect = lambda path, token, method="GET", data=None: current if "?per_page=" in path else []
+                sync.sync_issue("csBlackWolf/PatchTools", 1, state, "token", rejected=rejected)
+                deleted = [call.args[0].split("/")[-1] for call in api.call_args_list
+                           if len(call.args) > 2 and call.args[2] == "DELETE"]
+                self.assertIn("status%3A%20next%20release", deleted)
+                self.assertNotIn("bug", deleted)
+                self.assertEqual("wontfix" in deleted, not rejected)
+        with patch.object(sync, "request") as api:
+            api.side_effect = lambda path, token, method="GET", data=None: [{"name":"enhancement"}] if "?per_page=" in path else []
+            sync.sync_issue("csBlackWolf/PatchTools", 1, "Done", "token", rejected=True)
+            self.assertTrue(any(call.args[2:] == ("POST", {"labels":["wontfix"]}) for call in api.call_args_list))
 
     def test_paginate_board_before_any_writes(self):
         with patch.object(sync, "request", side_effect=[page([item()], True), page([item("Deferred")])]) as api:
@@ -57,11 +75,11 @@ class ProjectStatusTests(unittest.TestCase):
 class ClaimTests(unittest.TestCase):
     def board_item(self, **changes):
         event={"__typename":"ProjectV2ItemStatusChangedEvent","createdAt":"2099-01-01T00:00:00Z",
-               "previousStatus":"New","status":"Reviewed","wasAutomated":False,
+               "previousStatus":"New","status":"Planned","wasAutomated":False,
                "actor":{"__typename":"User","login":"reviewer"},
                "project":{"number":9,"owner":{"login":"csBlackWolf"}}}
         event.update(changes)
-        result=item("Reviewed")
+        result=item("Planned")
         result["content"]["timelineItems"]={"nodes":[event]}
         return result
 
@@ -93,6 +111,34 @@ class ClaimTests(unittest.TestCase):
         with patch.object(sync,"request",side_effect=[{"assignees":[]},None,{"assignees":[{"login":"reviewer"}]}]) as api:
             sync.sync_assignment("csBlackWolf/PatchTools",1,"reviewer","token")
             self.assertEqual(api.call_args.args[2:],("POST",{"assignees":["reviewer"]}))
+
+
+class RejectionTests(unittest.TestCase):
+    def event(self, previous="New", state="Done", date="2099-01-01", board=9):
+        return {"__typename":"ProjectV2ItemStatusChangedEvent", "createdAt":date,
+                "previousStatus":previous, "status":state,
+                "project":{"number":board, "owner":{"login":"csBlackWolf"}}}
+
+    def test_direct_decline_and_reversal(self):
+        data=item("Done")
+        data["content"]["timelineItems"]={"nodes":[self.event()]}
+        self.assertTrue(sync.is_rejected(data))
+        for state in ("New", "Planned", "In Progress", "Deferred"):
+            data["fieldValueByName"]["name"]=state
+            self.assertFalse(sync.is_rejected(data))
+        data["fieldValueByName"]["name"]="Done"
+        data["content"]["timelineItems"]["nodes"].extend([
+            self.event("Done", "Planned", "2099-01-02"),
+            self.event("In Progress", "Done", "2099-01-03")])
+        self.assertFalse(sync.is_rejected(data))
+
+    def test_other_board_and_missing_history_do_not_invent_rejections(self):
+        data=item("Done")
+        self.assertFalse(sync.is_rejected(data))
+        data["content"]["timelineItems"]={"nodes":[self.event(board=6)]}
+        self.assertFalse(sync.is_rejected(data))
+        data["content"]["timelineItems"]["nodes"]=[self.event(), self.event("Done", "Planned", "2099-02-01", board=6)]
+        self.assertTrue(sync.is_rejected(data))
 
 
 if __name__ == "__main__":

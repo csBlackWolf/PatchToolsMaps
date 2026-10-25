@@ -19,7 +19,7 @@ jobs:
           persist-credentials: false
       - name: Check synchronization logic
         run: python -m unittest discover -s .github/scripts -p 'test_*.py'
-      - name: Mirror board status and claim reviewed issues
+      - name: Synchronize board status, rejection labels and assignees
         env:
           PROJECT_READ_TOKEN: ${{ secrets.PROJECT_READ_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}

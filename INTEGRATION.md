@@ -136,6 +136,6 @@ different zoom/window/UI scales, before and after reload, during/after combat,
 and with your own feature disabled. Verify clicks, right-clicks, modifiers,
 tooltips, translated labels, visibility changes and original-anchor restoration.
 
-The modern map area name has a right-click shortcut to a small transparency slider. It shares the same setting as the Map settings page, and closes via the close button, Escape, a second right-click, or when the map closes/fullscreen starts.
+The modern map area name has a right-click shortcut to a small transparency slider. It shares the same setting as the Map settings page, and closes on an outside click, via the close button, Escape, a second right-click, or when the map closes/fullscreen starts. The compact popup prefers space above the title, then beside the map, before falling back below.
 
-Standard GameTooltip tooltips owned by registered header widgets are placed above the widget while Modern is active, preserving addon text and scripts. Tooltips are clamped to the screen at its edges. Unrelated tooltips and Classic placement are left alone; custom tooltip libraries retain their own behavior.
+Only tooltips created by PatchToolsMaps itself (its action API and area name) are placed above their controls and clamped at screen edges. Tooltip scripts and placement belonging to registered third-party widgets are not hooked or repositioned, avoiding jumps and conflicts with their own tooltip systems.

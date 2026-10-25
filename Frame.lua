@@ -99,9 +99,6 @@ function Maps:RegisterFrameWidget(id,frame,slot)
         if entry.id==id then return false end
     end
     self.frameWidgets[#self.frameWidgets+1]={id=id,frame=frame,slot=slot}
-    if slot=="buttons" and type(frame.HookScript)=="function" then
-        frame:HookScript("OnEnter",function() self:PositionHeaderTooltip(frame) end)
-    end
     return true
 end
 
@@ -239,9 +236,6 @@ function Maps:InstallCustomFrame(map)
         if elapsedTotal<.15 then return end
         elapsedTotal=0
         self:UpdateFrameCoordinates()
-        for _,entry in ipairs(self.frameWidgets or {}) do
-            if entry.slot=="buttons" then self:PositionHeaderTooltip(entry.frame) end
-        end
         local actionsChanged=self:UpdateMapActions()
         if self:UpdateNovaTimers() or actionsChanged then self:Refresh() end
     end)

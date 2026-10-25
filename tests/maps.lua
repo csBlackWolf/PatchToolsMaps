@@ -910,6 +910,28 @@ do
         header.scripts.OnClick(header,'RightButton')
         local popup=Maps.opacityPopup
         assert(popup:IsShown() and popup.slider.value==30)
+        assert(popup:GetWidth()==260 and popup:GetHeight()==70 and popup.points[1][1]=='BOTTOMLEFT'
+            and popup.points[1][3]=='TOPLEFT','prefer compact popup above the title')
+        local hover=false
+        popup.IsMouseOver=function() return hover end
+        hover=true; Event('GLOBAL_MOUSE_DOWN','LeftButton'); assert(popup:IsShown(),'inside click must retain the slider')
+        hover=false; Event('GLOBAL_MOUSE_DOWN','LeftButton'); assert(not popup:IsShown(),'outside click dismisses without intercepting the click')
+        header.scripts.OnClick(header,'RightButton')
+        local oldHover=header.IsMouseOver
+        header.IsMouseOver=function() return true end
+        Event('GLOBAL_MOUSE_DOWN','RightButton'); assert(popup:IsShown())
+        header.scripts.OnClick(header,'RightButton'); assert(not popup:IsShown(),'second title right-click must not reopen the popup')
+        header.IsMouseOver=oldHover; header.scripts.OnClick(header,'RightButton')
+        local oldTop,oldLeft,oldWidth=header.GetTop,map.GetLeft,map.GetWidth
+        header.GetTop=function() return UIParent:GetHeight()-1 end
+        map.GetLeft=function() return 10 end; map.GetWidth=function() return 500 end
+        Maps:PlaceOpacityPopup(header); assert(popup.points[1][1]=='TOPLEFT' and popup.points[1][3]=='TOPRIGHT')
+        map.GetLeft=function() return 1200 end
+        Maps:PlaceOpacityPopup(header); assert(popup.points[1][1]=='TOPRIGHT' and popup.points[1][3]=='TOPLEFT')
+        map.GetLeft=function() return 10 end; map.GetWidth=function() return 1900 end
+        Maps:PlaceOpacityPopup(header); assert(popup.points[1][3]=='BOTTOMLEFT')
+        header.GetTop,map.GetLeft,map.GetWidth=oldTop,oldLeft,oldWidth
+        Maps:PlaceOpacityPopup(header)
         popup.slider:SetValue(42)
         assert(opacity==.42 and Maps.optionsUI.opacity.value==42 and popup.slider.value==42)
         opacity=.25; Event('CVAR_UPDATE','worldMapOpacity'); assert(popup.slider.value==25)
@@ -992,10 +1014,12 @@ if era then
         entered=entered+1; GameTooltip:SetOwner(external,'ANCHOR_BOTTOM')
         GameTooltip:SetText('External addon tooltip'); GameTooltip:Show()
     end)
+    local originalEnter=external.scripts.OnEnter
     assert(Maps:RegisterFrameWidget('Test.externalTooltip',external,'buttons'))
+    assert(external.scripts.OnEnter==originalEnter,'do not hook foreign tooltip scripts')
     Maps:Refresh(); external.scripts.OnEnter()
-    assert(entered==1 and GameTooltip.text=='External addon tooltip' and GameTooltip.points[1][1]=='BOTTOM'
-        and GameTooltip.points[1][2]==external and GameTooltip.points[1][3]=='TOP')
+    assert(entered==1 and GameTooltip.text=='External addon tooltip' and GameTooltip.anchor=='ANCHOR_BOTTOM',
+        'external addons keep their own tooltip placement without jumping')
     local elsewhere=Widget(UIParent)
     GameTooltip:SetOwner(elsewhere,'ANCHOR_BOTTOM'); GameTooltip:ClearAllPoints()
     Maps:PositionHeaderTooltip(external); assert(#GameTooltip.points==0,'leave unrelated tooltips untouched')

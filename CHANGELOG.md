@@ -1,3 +1,11 @@
+# PatchToolsMaps 0.3.0-alpha.12 — 2026-10-25
+
+- Stop hooking/repositioning third-party header tooltips. Only PatchToolsMaps action/title tooltips use our above-header placement, avoiding jumps and conflicts with addon tooltip systems.
+- Reduce the quick transparency popup to 260×70 with a shorter label. Prefer above the title; use space beside the map when needed before falling back below.
+- Dismiss on outside clicks without consuming them. Inside slider clicks/drags stay open, and a second right-click on the title still closes it. Retain Escape/map-close/fullscreen cleanup; include a fallback for older clients without the global mouse event.
+
+Validation: Era/Forever integration fixtures in English, German and English fallback cover external tooltip script preservation, compact popup placement/fallbacks, inside/outside clicks, title toggling and synchronization. In-game confirmation pending.
+
 # PatchToolsMaps 0.3.0-alpha.11 — 2026-10-25
 
 - Remove the tiny active-state checkmark from action icons. Deathlog keeps its original colors and reports heatmap state in its tooltip.

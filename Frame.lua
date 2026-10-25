@@ -82,6 +82,14 @@ end
 -- Addons may register an existing unprotected widget. Never clone its click
 -- handlers, change its visibility preference, or move map pins into the dock.
 -- Slots: buttons, info-left, info-right.
+function Maps:PositionHeaderTooltip(widget)
+    if not self.map or not self:UseCustomFrame() or not GameTooltip
+        or not GameTooltip:IsOwned(widget) then return end
+    GameTooltip:ClearAllPoints()
+    GameTooltip:SetPoint("BOTTOM",widget,"TOP",0,6)
+    GameTooltip:SetClampedToScreen(true)
+end
+
 function Maps:RegisterFrameWidget(id,frame,slot)
     if type(id)~="string" or id=="" or not Allowed(frame) then return false end
     if slot~="buttons" and slot~="info-left" and slot~="info-right" then return false end
@@ -91,6 +99,9 @@ function Maps:RegisterFrameWidget(id,frame,slot)
         if entry.id==id then return false end
     end
     self.frameWidgets[#self.frameWidgets+1]={id=id,frame=frame,slot=slot}
+    if slot=="buttons" and type(frame.HookScript)=="function" then
+        frame:HookScript("OnEnter",function() self:PositionHeaderTooltip(frame) end)
+    end
     return true
 end
 
@@ -191,7 +202,8 @@ function Maps:InstallCustomFrame(map)
         if button=="RightButton" then self:ToggleOpacityPopup(header) end
     end)
     header:SetScript("OnEnter",function()
-        GameTooltip:SetOwner(header,"ANCHOR_BOTTOM"); GameTooltip:SetText(self:T("OPACITY_SHORTCUT")); GameTooltip:Show()
+        GameTooltip:SetOwner(header,"ANCHOR_TOP"); GameTooltip:SetText(self:T("OPACITY_SHORTCUT")); GameTooltip:Show()
+        self:PositionHeaderTooltip(header)
     end)
     header:SetScript("OnLeave",function() GameTooltip:Hide() end)
     header:HookScript("OnDragStart",function() if self.opacityPopup then self.opacityPopup:Hide() end end)
@@ -227,6 +239,9 @@ function Maps:InstallCustomFrame(map)
         if elapsedTotal<.15 then return end
         elapsedTotal=0
         self:UpdateFrameCoordinates()
+        for _,entry in ipairs(self.frameWidgets or {}) do
+            if entry.slot=="buttons" then self:PositionHeaderTooltip(entry.frame) end
+        end
         local actionsChanged=self:UpdateMapActions()
         if self:UpdateNovaTimers() or actionsChanged then self:Refresh() end
     end)

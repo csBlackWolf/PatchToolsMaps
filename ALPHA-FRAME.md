@@ -1,6 +1,6 @@
 # Custom map frame alpha
 
-Version: 0.3.0-alpha.10. Branch: alpha/custom-map-frame. Based on stable 0.2.1.
+Version: 0.3.0-alpha.11. Branch: alpha/custom-map-frame. Based on stable 0.2.1.
 
 This is an experimental Classic Era frame. Forever keeps its native layout until a separate in-game test is possible. No stable release tag is changed.
 

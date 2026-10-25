@@ -32,6 +32,8 @@ local function Widget(parent)
     function methods:GetNumPoints() return #self.points end
     function methods:GetPoint(i) return unpack(self.points[i]) end
     function methods:GetParent() return self.parent end
+    function methods:SetOwner(owner,anchor) self.owner,self.anchor=owner,anchor end
+    function methods:IsOwned(owner) return self.owner==owner end
     function methods:SetParent(parent) self.parent=parent end
     function methods:GetName() return rawget(self,"name") end
     function methods:IsProtected() return rawget(self,"protected")==true end
@@ -946,15 +948,17 @@ if era then
     Maps.db.customFrame=true; Maps:Refresh()
     local action=Maps.deathlogControl.button
     assert(action:GetParent()==Maps.customFrame.buttons and action:IsShown())
-    assert(action.border.texture==136430 and action.icon.vertexColor[1]==1 and action.state:IsShown())
+    assert(action.border.texture==136430 and action.icon.vertexColor[1]==1 and rawget(action,"state")==nil)
     assert(container:GetParent()==canvas and container:GetWidth()==40 and container:GetAlpha()==0)
     assert(checkbox:GetParent()==container and checkbox.label:GetParent()==container)
     assert(checkbox.points[1][1]=='TOPLEFT' and checkbox.scripts.OnClick==handler and not checkbox:IsMouseEnabled())
     action.scripts.OnClick(action,'LeftButton')
-    assert(clicked==1 and not checkbox:GetChecked() and not action.icon.desaturated and not action.state:IsShown())
+    assert(clicked==1 and not checkbox:GetChecked() and not action.icon.desaturated and rawget(action,"state")==nil)
     action.scripts.OnClick(action,'RightButton'); assert(clicked==1)
     GameTooltip=Widget(UIParent)
     action.scripts.OnEnter(); assert(GameTooltip.text:find(Maps:T('STATE_OFF'),1,true))
+    assert(GameTooltip.anchor=='ANCHOR_TOP' and GameTooltip.points[1][1]=='BOTTOM'
+        and GameTooltip.points[1][2]==action and GameTooltip.points[1][3]=='TOP')
     container:Hide(); Maps:Refresh(); assert(not action:IsShown(),'respect Deathlog checkbox visibility preference')
     container:Show(); Maps:Refresh(); assert(action:IsShown())
     local stats=Widget(UIParent); DeathlogHeatmapCheckbox=Widget(stats)
@@ -982,6 +986,23 @@ if era then
     Maps:Refresh(); button.scripts.OnClick(button,'LeftButton')
     assert(clicks==1 and not button.icon.desaturated)
     visible=false; Maps:Refresh(); assert(not button:IsShown())
+    local external=Widget(map); external:SetSize(24,24)
+    local entered=0
+    external:SetScript('OnEnter',function()
+        entered=entered+1; GameTooltip:SetOwner(external,'ANCHOR_BOTTOM')
+        GameTooltip:SetText('External addon tooltip'); GameTooltip:Show()
+    end)
+    assert(Maps:RegisterFrameWidget('Test.externalTooltip',external,'buttons'))
+    Maps:Refresh(); external.scripts.OnEnter()
+    assert(entered==1 and GameTooltip.text=='External addon tooltip' and GameTooltip.points[1][1]=='BOTTOM'
+        and GameTooltip.points[1][2]==external and GameTooltip.points[1][3]=='TOP')
+    local elsewhere=Widget(UIParent)
+    GameTooltip:SetOwner(elsewhere,'ANCHOR_BOTTOM'); GameTooltip:ClearAllPoints()
+    Maps:PositionHeaderTooltip(external); assert(#GameTooltip.points==0,'leave unrelated tooltips untouched')
+    Maps.db.customFrame=false; Maps:Refresh()
+    GameTooltip:SetOwner(external,'ANCHOR_BOTTOM'); GameTooltip:ClearAllPoints()
+    Maps:PositionHeaderTooltip(external); assert(#GameTooltip.points==0,'Classic keeps native tooltip placement')
+    Maps.db.customFrame=true
     for i=1,30 do assert(Maps:RegisterMapAction('Test.extra'..i,{icon=134400,onClick=function() end})) end
     Maps:Refresh()
     local toolbar=Maps:GetToolbarLayout(500)

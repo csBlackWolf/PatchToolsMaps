@@ -1,6 +1,6 @@
 local _, Maps = ...
 _G.PatchToolsMaps = Maps
-Maps.version = "0.3.0-alpha.10"
+Maps.version = "0.3.0-alpha.11"
 local en = {
     OPACITY_SHORTCUT="Right-click the area name to adjust map transparency.",
     STATE_ON="On", STATE_OFF="Off", DEATHLOG_HEATMAP="Deathlog · Heatmap: %s\nClick to toggle the heatmap.",

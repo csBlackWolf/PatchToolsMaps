@@ -1,3 +1,10 @@
+# PatchToolsMaps 0.3.0-alpha.11 — 2026-10-25
+
+- Remove the tiny active-state checkmark from action icons. Deathlog keeps its original colors and reports heatmap state in its tooltip.
+- Place modern-header action and area-name tooltips above the toolbar. Apply the same placement to standard GameTooltip tooltips owned by registered addon header buttons, preserving their content and callbacks. Clamp at screen edges; leave unrelated and Classic tooltips alone.
+
+Validation: Era/Forever integration fixtures in English, German and English fallback cover ownership-aware tooltip placement, preserved external callbacks/content and Classic fallback. In-game appearance confirmation pending.
+
 # PatchToolsMaps 0.3.0-alpha.10 — 2026-10-25
 
 - Use additive blending for the round minimap-style hover glow. Its black texture background must not cover the Deathlog skull and border when hovered.

@@ -34,8 +34,9 @@ Your original native control remains the fallback when Modern is inactive;
 custom action icons themselves are visible only in the Modern frame.
 
 The icon is displayed at 24 px with a tooltip. An optional `isActive` callback
-adds a small checkmark when active; original icon colors remain visible in both
-states. Set `style = "minimap"` for the native round minimap border. `isShown` controls whether
+can adjust the plain border accent; original icon colors remain visible in both
+states. Set `style = "minimap"` for the native round minimap border. For toggles,
+put the current state in the tooltip; no small checkmark obscures the icon. `isShown` controls whether
 the icon is present; omit it to show the action whenever Modern is active. These
 callbacks are polled while the modern frame is visible: keep them cheap and
 read-only. `onClick` receives the button and mouse-button name; your addon owns
@@ -136,3 +137,5 @@ and with your own feature disabled. Verify clicks, right-clicks, modifiers,
 tooltips, translated labels, visibility changes and original-anchor restoration.
 
 The modern map area name has a right-click shortcut to a small transparency slider. It shares the same setting as the Map settings page, and closes via the close button, Escape, a second right-click, or when the map closes/fullscreen starts.
+
+Standard GameTooltip tooltips owned by registered header widgets are placed above the widget while Modern is active, preserving addon text and scripts. Tooltips are clamped to the screen at its edges. Unrelated tooltips and Classic placement are left alone; custom tooltip libraries retain their own behavior.

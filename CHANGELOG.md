@@ -1,5 +1,7 @@
 # PatchToolsMaps 0.3.0-alpha.13 — 2026-10-25
 
+**Public alpha test: this version is likely to contain bugs. Please report problems and feedback on GitHub. Use the stable releases if you prefer the established feature set.**
+
 Alpha preview. **Install together with PatchTools 0.9.0-alpha.13 for the complete settings experience.** Stable PatchToolsMaps 0.2.1 remains unchanged. The module also loads with stable PatchTools 0.8.0, but the matched alpha pair is recommended.
 
 - Modern compact Classic Era map frame by default, with an option to restore the classic frame.

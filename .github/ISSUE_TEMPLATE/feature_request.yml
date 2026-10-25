@@ -1,7 +1,7 @@
 name: Feature idea / Funktionswunsch
 description: Share an idea for PatchToolsMaps. Deutsch und Englisch sind willkommen.
 title: "[Idea]: "
-labels: ["status: new"]
+labels: ["status: new", "enhancement"]
 body:
   - type: markdown
     attributes:

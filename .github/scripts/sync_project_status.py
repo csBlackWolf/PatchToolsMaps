@@ -20,7 +20,8 @@ STATUSES = {
     "Deferred": "status: deferred",
     "Done": "status: done",
 }
-LEGACY_LABELS = {"status: reviewed", "status: next release"}
+REJECTION_LABEL = "status: wontfix"
+LEGACY_LABELS = {"status: reviewed", "status: next release", "wontfix"}
 COLORS = {"New": "d4c5f9", "Planned": "fbca04", "In Progress": "1d76db",
           "Deferred": "eeeeee", "Done": "0e8a16"}
 QUERY = """query($after: String) {
@@ -116,9 +117,7 @@ def sync_issue(repository, number, state, token, rejected=False):
         if len(labels) < 100:
             break
         page += 1
-    desired = {STATUSES[state]}
-    if state == "Done" and rejected:
-        desired.add("wontfix")
+    desired = {REJECTION_LABEL if state == "Done" and rejected else STATUSES[state]}
     for label in sorted(desired - current):
         try:
             request(base + "/labels/" + urllib.parse.quote(label, safe=""), token)
@@ -126,11 +125,11 @@ def sync_issue(repository, number, state, token, rejected=False):
             if error.code != 404:
                 raise
             request(base + "/labels", token, "POST",
-                    {"name": label, "color": "ffffff" if label == "wontfix" else COLORS[state],
-                     "description": "Declined during triage" if label == "wontfix" else
+                    {"name": label, "color": "ffffff" if label == REJECTION_LABEL else COLORS[state],
+                     "description": "Declined during triage" if label == REJECTION_LABEL else
                                     "Status from the shared PatchTools planning board"})
         request(issue_path, token, "POST", {"labels": [label]})
-    managed = set(STATUSES.values()) | LEGACY_LABELS | {"wontfix"}
+    managed = set(STATUSES.values()) | LEGACY_LABELS | {REJECTION_LABEL}
     for previous in sorted(current.intersection(managed) - desired):
         try:
             request(issue_path + "/" + urllib.parse.quote(previous, safe=""), token, "DELETE")

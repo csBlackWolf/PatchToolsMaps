@@ -1,7 +1,7 @@
 name: Bug report
 description: Report a reproducible PatchToolsMaps problem or Lua error.
 title: "[Bug]: "
-labels: ["status: new"]
+labels: ["status: new", "bug"]
 body:
   - type: markdown
     attributes:

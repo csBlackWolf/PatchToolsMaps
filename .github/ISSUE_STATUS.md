@@ -9,7 +9,8 @@ adds another status, the workflow removes the previous status labels.
 | `status: new` | Waiting for review. / Noch nicht gesichtet. |
 | `status: planned` | Accepted for future work; no release date yet. / Für später eingeplant, noch ohne Termin. |
 | `status: in progress` | Work has started. / Wird bearbeitet. |
-| `status: done` | Completed, or declined with `wontfix`. / Erledigt oder mit `wontfix` abgelehnt. |
+| `status: done` | Completed. / Erledigt. |
+| `status: wontfix` | Declined during triage. / Bei der Sichtung abgelehnt. |
 | `status: deferred` | Accepted but postponed; not promised for the next release. / Angenommen, aber vorerst zurückgestellt. |
 
 An issue's open/closed state is separate from these labels. Closing an issue does
@@ -26,7 +27,7 @@ Planned means accepted without a release promise. In Progress means active work.
 
 The board is the source of truth. Native Projects workflows add new issues from both repositories. The `Project status, labels and assignees` workflow reads board #9 about every 15 minutes (GitHub may delay scheduled runs) and mirrors its Status into the corresponding issue label. Drag-and-drop changes are therefore not immediate. A maintainer can also use Run workflow in Actions. Labels such as bug and enhancement are preserved. Editing a status label does not move the board card; the next sync restores the board's status.
 
-`Done` maps to `status: done`; `Deferred` maps to `status: deferred`. Archived cards, drafts, unrelated repositories and unknown statuses are skipped. Closing an issue does not by itself prove it shipped.
+`Done` maps to `status: done` for completed work, or `status: wontfix` for a direct New-to-Done rejection; `Deferred` maps to `status: deferred`. Archived cards, drafts, unrelated repositories and unknown statuses are skipped. Closing an issue does not by itself prove it shipped.
 
 Authentication: `PROJECT_READ_TOKEN` is a read-only Projects token, stored as an Actions secret in each repository, expiring 2027-01-22. It is used only for reading the shared board. The built-in repository `GITHUB_TOKEN`, restricted to contents:read and issues:write, updates labels only in its own repository. Renew the read token and update both secrets before expiry. Never put its value in source files, logs or screenshots.
 
@@ -39,14 +40,30 @@ Existing assignees are preserved. Bot/automated changes, other boards, historica
 
 ## Declining an issue
 
-Moving an issue directly from **New** to **Done** adds `wontfix` alongside `status: done`.
-Moving it back to New, Planned, In Progress or Deferred removes `wontfix` again.
+Moving an issue directly from **New** to **Done** sets `status: wontfix` instead of `status: done`.
+Moving it back to New, Planned, In Progress or Deferred replaces `status: wontfix` with the corresponding status label again.
 A later completion from Planned or In Progress to Done is not a rejection.
 The latest status transition on this board determines the result; missing history
 is not treated as rejection. Other issue labels and existing assignees are preserved.
 This follows the same scheduled synchronization, so changes can take about 15 minutes.
 
-Direkt **New → Done** bedeutet abgelehnt (`wontfix`). Beim Zurückschieben wird
-`wontfix` entfernt. **Planned** sagt nur zu, dass die Idee angenommen wurde;
+Direkt **New → Done** bedeutet abgelehnt (`status: wontfix`). Beim Zurückschieben wird
+`status: wontfix` ersetzt. **Planned** sagt nur zu, dass die Idee angenommen wurde;
 es ist kein Versprechen für den nächsten Release. Done kann daher erledigte
 und abgelehnte Einträge enthalten; das Label macht den Unterschied sichtbar.
+
+## Labels from issue forms
+
+New reports receive `status: new` plus a separate type label automatically:
+
+| Issue form | Type label |
+| --- | --- |
+| Feature idea / Funktionswunsch | `enhancement` |
+| Bug report | `bug` |
+| Translation issue | `translation` |
+
+`translation` covers wording, localization and translation suggestions.
+`accessibility` is reserved for accessibility and assistive-use topics.
+Type labels remain unchanged when a card moves between board statuses.
+Retired status labels and the former unprefixed `wontfix` are cleaned up by
+synchronization; they are never recreated.

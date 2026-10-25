@@ -1,7 +1,7 @@
 name: Translation issue
 description: Report incorrect wording or propose a translation.
 title: "[Translation]: "
-labels: ["status: new"]
+labels: ["status: new", "translation"]
 body:
   - type: input
     id: language

@@ -46,7 +46,7 @@ class ProjectStatusTests(unittest.TestCase):
 
     def test_rejection_is_added_and_removed_without_touching_type_labels(self):
         for state, rejected in (("Done", True), ("New", False), ("Planned", False), ("Done", False)):
-            current = [{"name": name} for name in ("bug", "status: next release", "wontfix")]
+            current = [{"name": name} for name in ("bug", "status: next release", "status: done", "status: wontfix", "wontfix")]
             with self.subTest(state=state, rejected=rejected), patch.object(sync, "request") as api:
                 api.side_effect = lambda path, token, method="GET", data=None: current if "?per_page=" in path else []
                 sync.sync_issue("csBlackWolf/PatchTools", 1, state, "token", rejected=rejected)
@@ -54,11 +54,13 @@ class ProjectStatusTests(unittest.TestCase):
                            if len(call.args) > 2 and call.args[2] == "DELETE"]
                 self.assertIn("status%3A%20next%20release", deleted)
                 self.assertNotIn("bug", deleted)
-                self.assertEqual("wontfix" in deleted, not rejected)
+                self.assertIn("wontfix", deleted)
+                self.assertEqual("status%3A%20wontfix" in deleted, not rejected)
+                self.assertEqual("status%3A%20done" in deleted, rejected or state != "Done")
         with patch.object(sync, "request") as api:
             api.side_effect = lambda path, token, method="GET", data=None: [{"name":"enhancement"}] if "?per_page=" in path else []
             sync.sync_issue("csBlackWolf/PatchTools", 1, "Done", "token", rejected=True)
-            self.assertTrue(any(call.args[2:] == ("POST", {"labels":["wontfix"]}) for call in api.call_args_list))
+            self.assertTrue(any(call.args[2:] == ("POST", {"labels":["status: wontfix"]}) for call in api.call_args_list))
 
     def test_paginate_board_before_any_writes(self):
         with patch.object(sync, "request", side_effect=[page([item()], True), page([item("Deferred")])]) as api:

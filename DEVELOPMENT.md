@@ -1,68 +1,43 @@
-# PatchToolsMaps
+# Developing PatchToolsMaps
 
-Optional map settings for **PatchTools**, with built-in English and German. Made by Patch & Zen.
+PatchToolsMaps owns its map settings and registers them with PatchTools extension API 1, available since PatchTools 0.7.0. Check the API before registering; an incompatible base should receive an explanatory message without attaching map hooks. See the [user guide](GUIDE.md) for installation and controls.
 
-**Developer notes for PatchToolsMaps 0.1.0.** Window movement, resizing and zoom passed initial in-game checks; automated tests cover loading, reveal modes and reset behaviour.
+## Runtime responsibilities
 
-Requires **PatchTools 0.7.0 or newer** (extension API 1). PatchTools 0.6.0 does not yet provide this interface. Without it, the addon prints an explanatory message and does not attach to the world map.
+`Window.lua` handles map geometry, movement and resizing. Keep Blizzard's native coordinate system aligned with the visible canvas; resizing must not separate hit testing from the displayed art. Preserve zoom and center when the window changes. Clamp at minimum zoom without repeatedly applying tiny corrections, which can make the map shake.
 
-## Prepared features
+Extended zoom spans the native minimum through four times its maximum outside combat. Observe XML-bound scripts with `HookScript`, enable wheel input on the canvas, and use the supported secure call path for instant pan/zoom. Do not edit Blizzard's zoom-level table or add reveal textures to its shared mask list. Defer protected changes in combat; ordinary native zoom remains available.
 
-- A Map section in PatchTools settings, present only when PatchToolsMaps is loaded.
-- Drag the window using its top strip.
-- Resize uniformly using the small square handle at the bottom-right corner, from 60% to 150% of the original scale. The handle overlaps the frame and uses a dark face, gold edge and diagonal resize marks.
-- Save window position and scale. The reset button restores position, size and native zoom/centre, disables extended zoom, and closes an open map. Reopen the map normally to rebuild its display. Closing waits until combat ends when necessary. The full-screen map stays under Blizzard's control.
-- Optional extended zoom: one extra close zoom step, with no added image detail. Off by default.
-- Three visual modes for unexplored areas: Classic, Semi-transparent fog (default), Fully revealed. Unexplored overlays use 50% opacity in fog mode; explored areas retain their native display.
-- Window changes and zoom updates are deferred during combat.
-- Opening/minimizing the map waits for Blizzard's zoom levels before querying the current layer. Overlays refresh when those levels become available.
+Settings defaults apply only to missing or invalid values. Preserve an explicit saved `false`. Reset restores geometry and zoom and closes an open map so it can rebuild cleanly. Do not query the current layer before Blizzard has initialized its zoom levels.
+
+## Modern frame and integrations
+
+The modern frame is an Era alpha feature; Forever retains its native layout. `Frame.lua` owns chrome and explicitly registered fixed widgets, while `Window.lua` retains map coordinates. Classic and fullscreen views restore adopted widgets to their previous parents and anchors. Reject protected widgets and defer layout during combat.
+
+Prefer small toolbar icons for addon toggles, with state in tooltips. Keep geographical pins on the canvas and fixed controls/timers in the header or footer. [INTEGRATION.md](INTEGRATION.md) documents the action/widget APIs, load order, ownership, overflow and examples. [ALPHA-FRAME.md](ALPHA-FRAME.md) records the adapters and focused test cases. Those guides describe alpha APIs; check for their presence before using them with stable versions.
+
+`Opacity.lua` shares the native `worldMapOpacity` CVar and `WorldMapFrame_SetOpacity` curve where available, with a fallback for other clients. Settings-window transparency remains separate. Only position tooltips owned by PatchToolsMaps; leave third-party tooltip handlers alone.
 
 ## Map data
 
-The preview includes an independently generated catalog from the installed **Forever beta 1.60.1.70532** client: **572 drawable overlays across 45 map-art variants**. It references 972 client textures; image files are not bundled. Data is used only for matching client build, map art, layer and dimensions. No Leatrix source code or database was copied.
+Catalogs are generated from client data and selected by client build, map art, layer and geometry. The Forever beta catalog originated from build 70532; Era build 70003 has a separate catalog and manifest. Reference game textures rather than distributing their image files. The exploration cache uses the same isolation and does not record player names, routes or chat.
 
-Unexplored areas with catalog data can be displayed immediately, without first exploring them on another character. A local cache of already explored images supplements the catalog. The cache is separated by client build, map art, layer and geometry; it does not record player names, routes or chat.
+Skip records with missing texture tiles, undrawable or inconsistent geometry, unsupported conditions or runtime hover-only/top-layer data. Preserve the native display when no matching data exists. Cosmetic reveal must never change exploration state, XP or achievements. Ordinary flags 0 and 4 occur in the sampled Forever data; flag 4 still requires visual checking rather than assuming its meaning.
 
-One client overlay has no assigned texture tiles and seven have no drawable geometry; they are omitted. Unused map-art variants are not bundled. The catalog accepts the ordinary zone flags 0 and 4 found in this build, excluding other flags and player conditions. The full meaning of flag 4 has not been independently established; visual checks against the client remain necessary. Runtime hover-only/top-layer records are excluded from the exploration cache.
-
-Where matching data is unavailable, the native map is retained. This is a build-specific preview, not a claim that every map or later client build is supported. Render order, map labels and the 19 narrow texture edges with explicit file-size corrections need in-game checking.
-
-All modes are visual only. They do not grant exploration, XP or achievements and do not alter the game's explored-area data.
-
-## Local installation, when ready to test
-
-Back up your current PatchTools folder first. Put the prepared `PatchTools` and `PatchToolsMaps` folders alongside one another in the same client's `Interface/AddOns` folder. Enable both and use `/patchtools`, then Map/Karte. Do not install the addon inside the PatchTools folder.
-
-Local test installation is separate from publishing; the public release remains unchanged.
+See [tools/README.md](tools/README.md) for extraction and deterministic generation, the catalog manifests for provenance/hashes, and [RESEARCH.md](RESEARCH.md) for the original investigation. Historical research is context, not a statement of current support.
 
 ## Tests
 
-Run `python PatchToolsMaps/tests/run_tests.py` from the shared workspace with Python and `lupa` (Lua 5.4). The default base source location is the sibling `PatchTools-next/PatchTools` directory; set `PATCHTOOLS_BASE_PATH` for another location.
+From this repository run `python tests/run_tests.py` with Python and `lupa` (Lua 5.4). The runner expects a sibling `PatchTools-next/PatchTools`; set `PATCHTOOLS_BASE_PATH` when using another checkout. `python tests/test_catalog.py` checks tile ordering, layer indices, incomplete grids and exclusions.
 
-Mocks cover the optional/late load, settings page registration, defaults, visual modes, tile boundaries, texture caching, map-art isolation, zoom steps, reset and combat deferral. They do not establish that the UI looks or behaves correctly in the real client.
+Fixtures cover loading, defaults, reveal, cache isolation, zoom limits, reset and combat behavior; alpha fixtures add docking, coordinates, adapters, restoration and opacity. In-game checks must still cover world/continent/zone maps, resize hit testing, minimum-zoom scrolling, fullscreen changes, reload, combat and third-party addons. Test different exploration states and confirm exploration progress remains unchanged.
 
-`python PatchToolsMaps/tests/test_catalog.py` checks independent tile ordering, layer indices, incomplete grids and special-record exclusions. `tools/README.md` documents data extraction and deterministic catalog generation; `CATALOG-MANIFEST.json` records provenance and file hashes.
+## Publication and documentation
 
-## Before publishing
+CurseForge project 1761299 requires PatchTools project 1758728. Keep stable work on `main` and the modern frame on `alpha/custom-map-frame` until it is ready to merge. Check the actual target client's interface number and keep TOC/localized version declarations consistent.
 
-- Validate the interface number against the then-current Forever client.
-- Test dragging, scaling, map switching, zoom, full-screen transitions, combat and reloading with Questie/GatherMate2 enabled.
-- Test two characters with different exploration and confirm normal exploration progress is unchanged.
-- Verify generated coverage and special flags in the client; retain explicit exclusions for missing data.
-- Release the compatible PatchTools base first. CurseForge project 1761299 requires PatchTools project 1758728.
-- Bump the module version in the TOC and Locales.lua together. Its CurseForge ID is 1761299; never reuse the base project ID.
+Push a branch commit first and wait for its webhook delivery before pushing a separate version tag. Never push branch and tag together with `--follow-tags`: simultaneous events previously produced duplicate packages. Tags select Release/Alpha/Beta; an ordinary documentation commit does not create a new addon release. Check the resulting build/file and distinguish moderation from availability in the client. Do not overwrite existing tags.
 
-## License
+Keep the README short and player-focused, usage in [GUIDE.md](GUIDE.md), and implementation details here or in the integration/data guides. Review GitHub issues or the planning board only when requested; they are not a mandatory publication checkpoint.
 
-MIT. See LICENSE.txt. The bundled code is original; Blizzard textures are referenced from the game, not redistributed.
-
-
-## 0.2.0 client support and zoom
-
-Era 11509 and Forever 16001 share runtime code. XML-bound OnMouseWheel/OnMouseUp scripts are observed using HookScript; mouse-wheel input is explicitly enabled on the canvas. InstantPanAndZoom is invoked through securecallfunction outside combat. The addon never edits Blizzard zoomLevels or registers reveal textures in the shared native mask list. Enabled zoom spans the native minimum through four times its maximum and does not depend on the native wheel handler first reaching maximum.
-
-Era 70003 now has a separate generated catalog and CATALOG-MANIFEST-ERA.json. One inconsistent overlay is omitted; native display remains there. Defaults apply only to absent/invalid settings, preserving saved false values. Combat game checks passed in Era; the latest Forever gameplay retest is unavailable while Beta is closed.
-
-## Required idea review before a build push
-
-Follow [the build planning rules](AGENTS.md). Review current GitHub ideas and the [shared board](https://github.com/users/csBlackWolf/projects/9), report accepted/planned items with counts, titles and links, and highlight the next-release items. List deferred ideas separately. Wait for confirmation before pushing a build or release, so another idea can still be included. This is a planning checkpoint, not automatic implementation of feature requests.
+MIT; see [LICENSE.txt](LICENSE.txt). Keep the original notices when sharing code.

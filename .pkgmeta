@@ -3,6 +3,9 @@ enable-nolib-creation: no
 required-dependencies:
   - patchtools
 ignore:
+  - ALPHA-FRAME.md
+  - INTEGRATION.md
+  - GUIDE.md
   - AGENTS.md
   - .gitignore
   - .gitattributes

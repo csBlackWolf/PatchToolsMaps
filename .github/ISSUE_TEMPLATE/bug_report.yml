@@ -27,24 +27,13 @@ body:
       placeholder: "WoW Forever beta; Windows 11"
     validations:
       required: true
-  - type: dropdown
+  - type: input
     id: feature
     attributes:
-      label: Affected feature
-      options:
-        - Junk selling
-        - Repairs
-        - Camera zoom
-        - Ghost colours
-        - Cooldown numbers
-        - Login auto-loot
-        - Faster auto-loot
-        - Minimap icon / collector
-        - Options / localization
-        - Loading / saved settings
-        - Other
+      label: Affected feature / Betroffene Funktion
+      description: "Optional. Describe the feature in your own words; 'not sure' is fine. / Optional. Beschreibe die Funktion in eigenen Worten; 'weiß ich nicht' ist auch in Ordnung."
     validations:
-      required: true
+      required: false
   - type: textarea
     id: reproduce
     attributes:

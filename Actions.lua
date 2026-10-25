@@ -45,7 +45,10 @@ function Maps:RegisterMapAction(id,options)
     button.state:SetSize(12,12); button.state:SetPoint("BOTTOMRIGHT",0,0)
     local hover=button:CreateTexture(nil,"HIGHLIGHT")
     hover:SetAllPoints()
-    if button.minimapStyle then hover:SetTexture(136477)
+    if button.minimapStyle then
+        hover:SetTexture(136477)
+        -- This glow has a black background; add light instead of covering art.
+        hover:SetBlendMode("ADD")
     else hover:SetColorTexture(1,.8,.35,.18) end
     if not self:RegisterFrameWidget(id,button,"buttons") then return false end
     self.mapActions[id]={button=button,options=options}

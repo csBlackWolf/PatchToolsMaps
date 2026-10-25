@@ -1,3 +1,9 @@
+# PatchToolsMaps 0.3.0-alpha.10 — 2026-10-25
+
+- Use additive blending for the round minimap-style hover glow. Its black texture background must not cover the Deathlog skull and border when hovered.
+
+Validation: existing Era/Forever syntax and integration checks pass in English, German and English fallback. Actual hover appearance requires in-game confirmation.
+
 # PatchToolsMaps 0.3.0-alpha.9 — 2026-10-25
 
 - Right-click the area name in the modern frame for a quick transparency slider, synchronized with the native setting and the Map settings page. Close it with Escape, its close button, a second right-click, or by closing/maximizing the map.

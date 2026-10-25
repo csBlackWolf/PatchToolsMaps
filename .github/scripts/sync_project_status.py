@@ -15,15 +15,13 @@ AUTO_ASSIGN_SINCE = "2026-10-25T03:01:27Z"  # Do not claim historical transition
 
 STATUSES = {
     "New": "status: new",
-    "Reviewed": "status: reviewed",
     "Planned": "status: planned",
     "In Progress": "status: in progress",
-    "Next release": "status: next release",
     "Deferred": "status: deferred",
     "Done": "status: done",
 }
-COLORS = {"New": "d4c5f9", "Reviewed": "bfd4f2", "Planned": "fbca04",
-          "In Progress": "1d76db", "Next release": "0e8a16",
+LEGACY_LABELS = {"status: reviewed", "status: next release"}
+COLORS = {"New": "d4c5f9", "Planned": "fbca04", "In Progress": "1d76db",
           "Deferred": "eeeeee", "Done": "0e8a16"}
 QUERY = """query($after: String) {
   user(login: "csBlackWolf") {
@@ -107,7 +105,7 @@ def desired_items(items, repository):
         yield content["number"], state
 
 
-def sync_issue(repository, number, state, token):
+def sync_issue(repository, number, state, token, rejected=False):
     base = "/repos/" + repository
     issue_path = base + "/issues/" + str(number) + "/labels"
     current = set()
@@ -118,25 +116,50 @@ def sync_issue(repository, number, state, token):
         if len(labels) < 100:
             break
         page += 1
-    desired = STATUSES[state]
-    if desired not in current:
-        # GitHub may silently ignore assignment of a nonexistent repository label.
+    desired = {STATUSES[state]}
+    if state == "Done" and rejected:
+        desired.add("wontfix")
+    for label in sorted(desired - current):
         try:
-            request(base + "/labels/" + urllib.parse.quote(desired, safe=""), token)
+            request(base + "/labels/" + urllib.parse.quote(label, safe=""), token)
         except urllib.error.HTTPError as error:
             if error.code != 404:
                 raise
             request(base + "/labels", token, "POST",
-                    {"name": desired, "color": COLORS[state],
-                     "description": "Status from the shared PatchTools planning board"})
-        request(issue_path, token, "POST", {"labels": [desired]})
-    for previous in sorted(current.intersection(STATUSES.values()) - {desired}):
+                    {"name": label, "color": "ffffff" if label == "wontfix" else COLORS[state],
+                     "description": "Declined during triage" if label == "wontfix" else
+                                    "Status from the shared PatchTools planning board"})
+        request(issue_path, token, "POST", {"labels": [label]})
+    managed = set(STATUSES.values()) | LEGACY_LABELS | {"wontfix"}
+    for previous in sorted(current.intersection(managed) - desired):
         try:
             request(issue_path + "/" + urllib.parse.quote(previous, safe=""), token, "DELETE")
         except urllib.error.HTTPError as error:
             if error.code != 404:
                 raise
-    print("Issue #" + str(number) + ": " + desired)
+    print("Issue #" + str(number) + ": " + ", ".join(sorted(desired)))
+
+
+def is_rejected(item):
+    """Only a direct New -> Done transition on this board means declined.
+
+    Use the latest board transition so reopening/replanning and later completion
+    cannot retain a rejection from an earlier triage cycle.
+    """
+    if (item.get("fieldValueByName") or {}).get("name") != "Done":
+        return False
+    events = ((item.get("content") or {}).get("timelineItems") or {}).get("nodes") or []
+    transitions = []
+    for event in events:
+        if not event or event.get("__typename") != "ProjectV2ItemStatusChangedEvent":
+            continue
+        project = event.get("project") or {}
+        if project.get("number") == 9 and (project.get("owner") or {}).get("login") == "csBlackWolf":
+            transitions.append(event)
+    if not transitions:
+        return False
+    latest = max(transitions, key=lambda event: event.get("createdAt", ""))
+    return latest.get("previousStatus") == "New" and latest.get("status") == "Done"
 
 
 def claim_actor(item, since=AUTO_ASSIGN_SINCE):
@@ -197,11 +220,13 @@ def main():
         raise RuntimeError("Refusing to change an unexpected repository.")
     items = read_board(project_token)
     claims = {}
+    rejections = {}
     for item in items:
         if list(desired_items([item], repository)):
             claims[item["content"]["number"]] = claim_actor(item)
+            rejections[item["content"]["number"]] = is_rejected(item)
     for number, state in desired_items(items, repository):
-        sync_issue(repository, number, state, issue_token)
+        sync_issue(repository, number, state, issue_token, rejected=rejections[number])
         if claims.get(number):
             sync_assignment(repository, number, claims[number], issue_token)
 

@@ -22,9 +22,10 @@ jobs:
           import urllib.request
 
           statuses = {
-              "status: new", "status: reviewed", "status: planned",
-              "status: in progress", "status: next release", "status: deferred", "status: done",
+              "status: new", "status: planned",
+              "status: in progress", "status: deferred", "status: done",
           }
+          legacy = {"status: reviewed", "status: next release"}
           with open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8") as source:
               event = json.load(source)
           endpoint = "https://api.github.com/repos/" + os.environ["GITHUB_REPOSITORY"]
@@ -37,7 +38,8 @@ jobs:
                            "Accept": "application/vnd.github+json",
                            "Content-Type": "application/json"})
               with urllib.request.urlopen(req) as response:
-                  return json.load(response)
+                  body = response.read()
+                  return json.loads(body) if body else None
 
           current = {label["name"] for label in request("GET")}
           if event["action"] == "opened":
@@ -47,5 +49,5 @@ jobs:
               selected = event.get("label", {}).get("name")
               if selected in statuses and selected in current:
                   from urllib.parse import quote
-                  for previous in sorted(current.intersection(statuses) - {selected}):
+                  for previous in sorted(current.intersection(statuses | legacy) - {selected}):
                       request("DELETE", "/" + quote(previous, safe=""))

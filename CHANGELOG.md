@@ -1,3 +1,7 @@
+# PatchToolsMaps 0.3.0-alpha.13 — 2026-10-25
+
+- Remove the small close button from the quick transparency popup. Outside clicks, Escape and toggling the zone title continue to dismiss it.
+
 # PatchToolsMaps 0.3.0-alpha.12 — 2026-10-25
 
 - Stop hooking/repositioning third-party header tooltips. Only PatchToolsMaps action/title tooltips use our above-header placement, avoiding jumps and conflicts with addon tooltip systems.

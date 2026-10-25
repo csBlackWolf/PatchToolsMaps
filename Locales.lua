@@ -1,6 +1,6 @@
 local _, Maps = ...
 _G.PatchToolsMaps = Maps
-Maps.version = "0.3.0-alpha.12"
+Maps.version = "0.3.0-alpha.13"
 local en = {
     QUICK_TRANSPARENCY="Transparency: %d%%",
     OPACITY_SHORTCUT="Right-click the area name to adjust map transparency.",

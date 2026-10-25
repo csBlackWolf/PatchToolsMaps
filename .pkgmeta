@@ -3,6 +3,7 @@ enable-nolib-creation: no
 required-dependencies:
   - patchtools
 ignore:
+  - GUIDE.md
   - AGENTS.md
   - .gitignore
   - .gitattributes

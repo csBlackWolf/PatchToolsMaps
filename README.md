@@ -1,93 +1,61 @@
-# PatchToolsMaps
+# 🇬🇧 PatchToolsMaps
 
-**Experimental branch: custom Classic Era frame, 0.3.0-alpha.13.** See [alpha test notes](ALPHA-FRAME.md) for scope and controls. The stable release remains 0.2.1.
-
-Optional world map tools for **World of Warcraft: Forever and Classic Era**, with built-in **English and German** language support. Made by **Patch & Zen**.
-
-**Requires [PatchTools](https://www.curseforge.com/wow/addons/patchtools).** Adds a **Map** section to the PatchTools settings.
-
-[CurseForge project](https://www.curseforge.com/wow/addons/patchtoolsmaps) · [Source code](https://github.com/csBlackWolf/PatchToolsMaps)
+_Your world map, with more freedom. The map module for PatchTools, for Classic Era and Forever._
 
 ## Features
 
-- Move the world map using its existing title bar, without an extra label covering other addons.
-- Resize it with a native-style bottom-right handle, without an upper size limit. Move it beyond screen edges if desired.
-- Save your preferred position and size between sessions.
-- Extended mouse-wheel zoom is enabled by default for new settings; zoom for up to four times the native maximum outside combat. Native zoom remains available during combat.
-- Choose **Classic**, **Semi-transparent fog** (default), or **Fully revealed** for unexplored areas.
-- Reset position, size and zoom with one button. An open map closes so it can rebuild cleanly when reopened.
+- Move and resize the world map
+- Zoom in further with the mouse wheel
+- Choose how unexplored areas appear
+- Keep your preferred window position and size
+- Adjust everything through the PatchTools settings
 
-Reveal changes only the map display. It does not grant exploration, experience or achievements. Map coverage depends on the supported client build.
+**[PatchTools](https://www.curseforge.com/wow/addons/patchtools) is required and must be enabled!**
 
-## Availability and requirements
+**Try the alpha:** a modern map frame for Classic Era with coordinates and room for addon buttons and buff timers outside the map. Install the PatchTools alpha alongside the PatchToolsMaps alpha for the complete experience. This is a public test version and is likely to contain bugs. The stable version remains available.
 
-**Requires PatchTools 0.7.0 or newer.** Install or update the base addon before enabling PatchToolsMaps. PatchTools 0.6.0 does not support this module.
+## Commands
 
-Tested in game on **Forever Beta 1.60.1, build 70532**. Classic Era **1.15.9, build 70003** has passed in-game checks for zoom on world, continent and zone views, and error-free combat behaviour. The updated zoom is covered by automated Forever checks but could not be retested in the closed Beta. Newer builds are not yet confirmed. Window movement, resizing and zoom have passed initial in-game checks.
+| Command | What it does |
+| --- | --- |
+| `/ptmaps` | Open the Map settings in PatchTools. |
+| `/ptmaps reset` | Reset the map position, size and zoom. |
+| `/ptmaps status` | Show information useful for a bug report. |
 
-## Installation
+You can also use `/patchtoolsmaps` instead of `/ptmaps`.
 
-Install **PatchTools** and **PatchToolsMaps** together. For manual installation, place both folders next to each other in your WoW `Interface/AddOns` folder, for example:
+[Download on CurseForge](https://www.curseforge.com/wow/addons/patchtoolsmaps) · [Source code and bug reports](https://github.com/csBlackWolf/PatchToolsMaps)
 
-```text
-World of Warcraft/_forever_beta_/Interface/AddOns/PatchToolsMaps
-World of Warcraft/_forever_/Interface/AddOns/PatchToolsMaps
-World of Warcraft/_classic_era_/Interface/AddOns/PatchToolsMaps
-```
+[Detailed user guide](GUIDE.md) · [Developer guide](DEVELOPMENT.md)
 
-Some existing beta installations use `_classic_beta_` instead. Choose the folder used by your game. Do not put PatchToolsMaps inside the PatchTools folder.
+---
 
-## Controls and languages
+# 🇩🇪 PatchToolsMaps
 
-- Open **`/patchtools`**, then choose **Map** (German: **Karte**).
-- Drag the existing title bar to move the map; drag the corner handle to resize it.
-- Use the mouse wheel to zoom. **Extended map zoom** starts enabled for new settings; existing choices are preserved.
-- Use **Reset map position, size and zoom**, or **`/ptmaps reset`** (also **`/patchtoolsmaps reset`**), to restore the default view even if the map is off-screen.
-- English and German follow your game language; other languages use English.
+_Deine Weltkarte mit mehr Freiheiten. Das Kartenmodul für PatchTools, für Classic Era und Forever._
 
-## Reporting issues and suggesting features
+## Funktionen
 
-[Open an issue](https://github.com/csBlackWolf/PatchToolsMaps/issues/new/choose) for a bug or an idea. Tell us what happened, what you expected, and your WoW, PatchTools and PatchToolsMaps versions. Screenshots and error messages help but are optional. Please leave out account details and private chat. English and German are welcome.
+- Die Weltkarte frei verschieben und ihre Größe ändern
+- Mit dem Mausrad weiter hineinzoomen
+- Die Darstellung unentdeckter Gebiete selbst wählen
+- Die gewünschte Fensterposition und Größe beibehalten
+- Alles bequem in den PatchTools-Einstellungen anpassen
 
-Track progress through the issue labels: new, reviewed, planned, in progress, next release and deferred. [What each status means](.github/ISSUE_STATUS.md).
+**[PatchTools](https://www.curseforge.com/wow/addons/patchtools) wird benötigt und muss aktiviert sein!**
 
-## License
+**Probiere die Alpha:** ein moderner Kartenrahmen für Classic Era mit Koordinaten und Platz für Addon-Buttons und Buff-Timer außerhalb der Karte. Installiere die Alpha von PatchTools zusammen mit der Alpha von PatchToolsMaps, um alle neuen Funktionen zu nutzen. Dies ist eine öffentliche Testversion, die sehr wahrscheinlich noch Fehler enthält. Die stabile Version bleibt verfügbar.
 
-[MIT](LICENSE.txt). You may change and share the project while keeping the copyright and license notice.
+## Befehle
 
-## Changelog
+| Befehl | Funktion |
+| --- | --- |
+| `/ptmaps` | Die Karteneinstellungen in PatchTools öffnen. |
+| `/ptmaps reset` | Position, Größe und Zoom der Karte zurücksetzen. |
+| `/ptmaps status` | Hilfreiche Informationen für einen Fehlerbericht anzeigen. |
 
-### 2026-10-24 — 0.2.1
+Statt `/ptmaps` funktioniert auch `/patchtoolsmaps`.
 
-- Fix map clicks and highlights after resizing in Classic Era.
-- Keep the map, frame and controls aligned while changing the window size.
-- Preserve zoom and position when resizing; stop shaking at the smallest zoom.
-- Handle resize release outside the corner and combat interruptions safely.
+[Download auf CurseForge](https://www.curseforge.com/wow/addons/patchtoolsmaps) · [Quellcode und Fehlerberichte](https://github.com/csBlackWolf/PatchToolsMaps)
 
-### 2026-10-23 — 0.2.0
-
-- Add Classic Era support with its own map catalog.
-- Enable map zoom by default for new settings, including world and continent views.
-- Remove the window size cap and screen-edge restriction.
-- Use the existing Era title bar and a native-style resize handle.
-- Add `/ptmaps reset` and `/ptmaps status`; preserve saved choices and combat safeguards.
-
-### 2026-10-23 — 0.1.0
-
-First regular release. Requires PatchTools 0.7.0 or newer.
-
-- Keep move/resize controls visible during combat; ignore drag attempts until combat ends.
-- Avoid modifying Blizzard's zoom table or registering addon textures in its shared mask list.
-- Keep the additional zoom step disabled for combat compatibility; ordinary zoom is unchanged.
-
-- Added optional map settings, movement and resizing.
-- Added three display modes for unexplored areas.
-- Added saved window settings and a reset button that closes an open map.
-- Fixed opening the map before its zoom levels are ready.
-- Replaced the pointed decoration with a compact square resize handle.
-
-Developer notes: [DEVELOPMENT.md](DEVELOPMENT.md). Client-data generation: [tools/README.md](tools/README.md).
-
-Addon developers: see [frame integration and widget placement](INTEGRATION.md) for the header/footer API, checkbox containers, fallback behavior and compatibility checklist.
-
-Modern frame: right-click the area name for a quick map-transparency slider.
+[Ausführliche Bedienungsanleitung](GUIDE.md) · [Entwicklerinfos](DEVELOPMENT.md)

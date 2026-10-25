@@ -30,3 +30,10 @@ The board is the source of truth. Native Projects workflows add new issues from 
 `Done` maps to `status: done`; `Deferred` maps to `status: deferred`. Archived cards, drafts, unrelated repositories and unknown statuses are skipped. Closing an issue does not by itself prove it shipped.
 
 Authentication: `PROJECT_READ_TOKEN` is a read-only Projects token, stored as an Actions secret in each repository, expiring 2027-01-22. It is used only for reading the shared board. The built-in repository `GITHUB_TOKEN`, restricted to contents:read and issues:write, updates labels only in its own repository. Renew the read token and update both secrets before expiry. Never put its value in source files, logs or screenshots.
+
+
+## Automatic ownership after reviewing a new issue
+
+The existing board synchronization (about every 15 minutes) assigns an unassigned issue to the human who moves it from **New** to another recognized status on the shared board. Drag-and-drop and changes in the issue's Projects sidebar are supported through the same status-history event.
+
+Existing assignees are preserved. Bot/automated changes, other boards, historical transitions before this automation was enabled and later manual assignment/unassignment are ignored. The person must be assignable in the repository. This is scheduled synchronization, not an instant webhook.

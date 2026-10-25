@@ -54,5 +54,46 @@ class ProjectStatusTests(unittest.TestCase):
                     sync.read_board("read-token")
 
 
+class ClaimTests(unittest.TestCase):
+    def board_item(self, **changes):
+        event={"__typename":"ProjectV2ItemStatusChangedEvent","createdAt":"2099-01-01T00:00:00Z",
+               "previousStatus":"New","status":"Reviewed","wasAutomated":False,
+               "actor":{"__typename":"User","login":"reviewer"},
+               "project":{"number":9,"owner":{"login":"csBlackWolf"}}}
+        event.update(changes)
+        result=item("Reviewed")
+        result["content"]["timelineItems"]={"nodes":[event]}
+        return result
+
+    def test_recent_human_transition_claims_actor(self):
+        self.assertEqual(sync.claim_actor(self.board_item()),"reviewer")
+
+    def test_automated_wrong_board_old_and_non_new_transitions_are_ignored(self):
+        for changes in ({"wasAutomated":True},{"previousStatus":"Planned"},
+                        {"createdAt":"2000-01-01T00:00:00Z"},
+                        {"project":{"number":6,"owner":{"login":"csBlackWolf"}}},
+                        {"actor":{"__typename":"Bot","login":"github-actions"}}):
+            with self.subTest(changes=changes):
+                self.assertIsNone(sync.claim_actor(self.board_item(**changes)))
+        reset=self.board_item();reset["fieldValueByName"]["name"]="New"
+        self.assertIsNone(sync.claim_actor(reset))
+
+    def test_manual_assignment_and_unassignment_after_review_are_respected(self):
+        for kind in ("AssignedEvent","UnassignedEvent"):
+            data=self.board_item()
+            data["content"]["timelineItems"]["nodes"].append({"__typename":kind,"createdAt":"2099-01-02T00:00:00Z"})
+            self.assertIsNone(sync.claim_actor(data))
+
+    def test_existing_assignees_are_never_replaced(self):
+        with patch.object(sync,"request",return_value={"assignees":[{"login":"owner"}]}) as api:
+            sync.sync_assignment("csBlackWolf/PatchTools",1,"reviewer","token")
+            self.assertEqual(api.call_count,1)
+
+    def test_assignable_actor_is_added(self):
+        with patch.object(sync,"request",side_effect=[{"assignees":[]},None,{"assignees":[{"login":"reviewer"}]}]) as api:
+            sync.sync_assignment("csBlackWolf/PatchTools",1,"reviewer","token")
+            self.assertEqual(api.call_args.args[2:],("POST",{"assignees":["reviewer"]}))
+
+
 if __name__ == "__main__":
     unittest.main()

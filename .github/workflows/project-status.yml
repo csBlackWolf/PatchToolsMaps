@@ -1,4 +1,4 @@
-name: Project status to issue labels
+name: Project status, labels and assignees
 on:
   schedule:
     - cron: '7,22,37,52 * * * *'
@@ -19,7 +19,7 @@ jobs:
           persist-credentials: false
       - name: Check synchronization logic
         run: python -m unittest discover -s .github/scripts -p 'test_*.py'
-      - name: Mirror board status to issue labels
+      - name: Mirror board status and claim reviewed issues
         env:
           PROJECT_READ_TOKEN: ${{ secrets.PROJECT_READ_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}

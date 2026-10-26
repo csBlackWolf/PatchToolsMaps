@@ -187,8 +187,15 @@ function Maps:InstallCustomFrame(map)
     frame:EnableMouse(false)
     -- The legacy close control can retain an overlapping mouse region when
     -- the small-map chrome is resized. Use an explicitly sized foreground
-    -- control for Modern, forwarding the original close action unchanged.
-    local close=CreateFrame("Button",nil,frame)
+    -- control for Modern. A normal addon OnClick taints HideUIPanel and is
+    -- blocked during combat. Forward the hardware click through Blizzard's
+    -- secure action template instead of calling the native script ourselves.
+    local nativeClose=WorldMapFrameCloseButton
+    if not nativeClose then
+        nativeClose=CreateFrame("Button",nil,map,"UIPanelCloseButton")
+        nativeClose:Hide()
+    end
+    local close=CreateFrame("Button",nil,frame,"SecureActionButtonTemplate")
     self.customCloseButton=close
     close:SetSize(32,32); close:SetScale(1)
     close:SetPoint("TOPRIGHT",map,"TOPRIGHT",-4,-3)
@@ -198,13 +205,9 @@ function Maps:InstallCustomFrame(map)
     close:SetPushedTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Down")
     close:SetHighlightTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Highlight")
     close:RegisterForClicks("LeftButtonUp")
-    close:SetScript("OnClick",function()
-        local native=WorldMapFrameCloseButton
-        local click=native and native:GetScript("OnClick")
-        if click then click(native,"LeftButton")
-        elseif HideUIPanel then HideUIPanel(map)
-        else map:Hide() end
-    end)
+    close:SetAttribute("useOnKeyDown",false)
+    close:SetAttribute("type","click")
+    close:SetAttribute("clickbutton",nativeClose)
     if WorldMapFrameCloseButton then
         self.nativeCloseAppearance={alpha=WorldMapFrameCloseButton:GetAlpha(),mouse=WorldMapFrameCloseButton:IsMouseEnabled()}
     end

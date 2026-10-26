@@ -1,3 +1,10 @@
+# PatchToolsMaps 0.3.0-alpha.15-local.1 — local combat-close fix
+
+- Allow the modern frame's X button to close a map opened during combat through Blizzard's secure native close action.
+- Keep the larger hit area at small map sizes. Movement, resizing and extended zoom retain their existing combat deferral.
+
+Automated Classic Era/Forever integration checks passed, including combat close/reopen and classic/fullscreen restoration. In-game combat confirmation is pending. This is a local test build.
+
 # PatchToolsMaps 0.3.0-alpha.14 — 2026-10-26
 
 Public alpha test: bugs are possible. Please report problems in the central PatchTools issue tracker. The stable release remains available.

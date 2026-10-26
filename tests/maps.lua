@@ -11,11 +11,16 @@ end
 local frames={}
 unpack=table.unpack or unpack
 local combat=false
+local secureHardwareClick=false
 local cursorX,cursorY=100,100
 local function Widget(parent)
     local w={parent=parent,scripts={},events={},shown=true,width=1000,height=700,scale=1,points={},frameLevel=1}
     local methods={}
-    function methods:SetScript(k,v) self.scripts[k]=v end
+    function methods:SetScript(k,v)
+        assert(not (rawget(self,'template')=='SecureActionButtonTemplate' and k=='OnClick'),
+            'do not replace the secure click handler with addon Lua')
+        self.scripts[k]=v
+    end
     function methods:HookScript(k,v)
         local old=self.scripts[k]
         self.scripts[k]=function(...) if old then old(...) end; v(...) end
@@ -42,6 +47,21 @@ local function Widget(parent)
     function methods:IsMouseEnabled() return rawget(self,"mouse")==true end
     function methods:EnableMouse(value) self.mouse=value end
     function methods:GetScript(key) return self.scripts[key] end
+    function methods:SetAttribute(key,value)
+        assert(not combat,'secure button setup must happen outside combat')
+        self.attributes=rawget(self,'attributes') or {}; self.attributes[key]=value
+    end
+    function methods:GetAttribute(key) local attributes=rawget(self,'attributes'); return attributes and attributes[key] end
+    function methods:Click(button,down)
+        if self.template=='SecureActionButtonTemplate' then
+            if down then return end
+            assert(self:GetAttribute('useOnKeyDown')==false)
+            assert(self:GetAttribute('type')=='click')
+            local previous=secureHardwareClick; secureHardwareClick=true
+            self:GetAttribute('clickbutton'):Click(button or 'LeftButton')
+            secureHardwareClick=previous
+        elseif self.scripts.OnClick then self.scripts.OnClick(self,button or 'LeftButton',down) end
+    end
     function methods:GetTexture() return rawget(self,"texture") end
     function methods:GetScale() return self.scale end
     function methods:SetScale(s) self.scale=s end
@@ -83,6 +103,7 @@ local function Widget(parent)
 end
 function CreateFrame(_,name,parent,template)
     local w=Widget(parent); w.TitleText=Widget(w); frames[#frames+1]=w
+    w.template=template
     if name then _G[name]=w end
     if template=='OptionsSliderTemplate' then
         for _,suffix in ipairs({'Low','High','Text'}) do _G[name..suffix]=Widget(w) end
@@ -102,7 +123,10 @@ end
 function InCombatLockdown() return combat end
 function GetCursorPosition() return cursorX,cursorY end
 local panelCloses=0
-function HideUIPanel(frame) panelCloses=panelCloses+1; frame:Hide() end
+function HideUIPanel(frame)
+    assert(not combat or secureHardwareClick,'insecure HideUIPanel is blocked during combat')
+    panelCloses=panelCloses+1; frame:Hide()
+end
 local secureCalls=0
 function securecallfunction(fn,...)
     assert(not combat,'native UI calls must wait for combat to end')
@@ -1061,6 +1085,7 @@ if era then
     WorldMapFrameCloseButton:SetScript('OnClick',function(button,mouse)
         assert(button==WorldMapFrameCloseButton and mouse=='LeftButton')
         forwarded=forwarded+1
+        HideUIPanel(map)
     end)
     Maps.nativeCloseAppearance.mouse=true
     for _,factor in ipairs({.6,.7,1,2}) do
@@ -1071,9 +1096,22 @@ if era then
         assert(point=='TOPRIGHT' and relative==map and relativePoint=='TOPRIGHT' and x==-4 and y==-3)
         assert(close:GetScale()==1,'close hit area stays in the modern header coordinate system')
         assert(not WorldMapFrameCloseButton:IsMouseEnabled() and WorldMapFrameCloseButton:GetAlpha()==0)
-        close.scripts.OnClick()
+        close:Click('LeftButton')
     end
     assert(forwarded==4,'modern close keeps the original close action')
+    assert(Maps.customCloseButton.template=='SecureActionButtonTemplate')
+    assert(Maps.customCloseButton:GetAttribute('clickbutton')==WorldMapFrameCloseButton)
+    combat=true
+    for _=1,2 do
+        map:Show()
+        Maps.customCloseButton:Click('LeftButton',true)
+        assert(map:IsShown(),'close acts once on release, independent of action-key preferences')
+        Maps.customCloseButton:Click('LeftButton')
+        assert(not map:IsShown(),'a map opened during combat can close immediately through the native action')
+    end
+    assert(forwarded==6)
+    combat=false
+    map:Show()
     Maps.db.customFrame=false; Maps:Refresh()
     assert(not Maps.customCloseButton:IsShown() and WorldMapFrameCloseButton:IsMouseEnabled())
     assert(WorldMapFrameCloseButton:GetAlpha()==Maps.nativeCloseAppearance.alpha)
@@ -1081,7 +1119,7 @@ if era then
     map:Maximize(); assert(not Maps.customCloseButton:IsShown())
     map:Minimize(); assert(Maps.customCloseButton:IsShown())
     WorldMapFrameCloseButton:SetScript('OnClick',originalClick)
-    print('PASS: modern close position, fixed mouse bounds, native action forwarding and Classic/fullscreen restoration at small sizes.')
+    print('PASS: modern close position, fixed mouse bounds, secure native action in combat, key-down independence and Classic/fullscreen restoration.')
 end
 
 local account=PatchToolsMapsDB

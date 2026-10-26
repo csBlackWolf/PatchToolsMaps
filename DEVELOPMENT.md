@@ -43,3 +43,7 @@ Keep the README short and player-focused, usage in [GUIDE.md](GUIDE.md), and imp
 MIT; see [LICENSE.txt](LICENSE.txt). Keep the original notices when sharing code.
 
 Window position and scale use `PatchToolsMapsCharacterDB` (`SavedVariablesPerCharacter`). Import legacy account geometry once for each character; keep the legacy values as a migration seed without updating them. Resets affect only the current character. Other preferences, including opacity handling, retain their existing account storage.
+
+The modern close button uses `SecureActionButtonTemplate` with `type="click"` and `clickbutton` pointing to Blizzard's native map close button. Configure it outside combat and keep the inherited OnClick handler intact. Set `useOnKeyDown=false` to match the registered LeftButtonUp click regardless of action-bar preferences. A normal addon closure calling the native handler makes `HideUIPanel` fail its combat security check. Do not replace this path with a direct Lua call or defer closing until combat ends. Geometry and extra zoom retain separate combat guards.
+
+Reference: [Blizzard's panel security check](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_UIParentPanelManager/Shared/UIParentPanelManager.lua) and [secure click delegation](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_FrameXML/SecureTemplates.lua).

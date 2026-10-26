@@ -1,7 +1,14 @@
-# PatchToolsMaps 0.3.0-alpha.14-local.1 — local test — 2026-10-26
+# PatchToolsMaps 0.3.0-alpha.14 — 2026-10-26
 
-- Use a fixed-size foreground close button in the modern header, forwarding the native close action. Prevent the legacy close control and adopted addon buttons from intercepting its clicks at small sizes.
-- Restore the native close control in Classic/fullscreen. Map coordinates and pins are unchanged.
+Public alpha test: bugs are possible. Please report problems in the central PatchTools issue tracker. The stable release remains available.
+
+- Fix the modern map's close button at very small window sizes.
+- Remember map position and size separately for each character; retain shared transparency settings.
+- Keep the modern frame, addon toolbar, coordinates, buff timers and classic-frame option from the previous alpha.
+
+Recommended companion: PatchTools 0.9.0-alpha.14.
+
+The close-button fix was confirmed locally in Classic Era. Automated checks cover Classic Era and Forever; character-switch layout persistence still needs further in-game testing.
 
 # PatchToolsMaps 0.3.0-alpha.13 — 2026-10-25
 

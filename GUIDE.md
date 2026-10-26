@@ -38,4 +38,4 @@ Recorded in-game checks: Forever Beta 1.60.1 build 70532 and Classic Era 1.15.9 
 
 For a report, include WoW edition/build, PatchTools and module versions, map/zone, frame choice and steps to reproduce. `/ptmaps status` provides useful details. English and German are welcome. Leave private chat/account information out of screenshots.
 
-[Report a bug / Fehler melden](https://github.com/csBlackWolf/PatchToolsMaps/issues/new/choose) · [Developer guide](DEVELOPMENT.md) · [Changelog](CHANGELOG.md) · [Overview / Übersicht](README.md)
+[Report a bug / Fehler melden](https://github.com/csBlackWolf/PatchTools/issues/new/choose) · [Developer guide](DEVELOPMENT.md) · [Changelog](CHANGELOG.md) · [Overview / Übersicht](README.md)

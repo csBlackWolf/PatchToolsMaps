@@ -107,7 +107,7 @@ function Maps:UpdateNovaTimers()
     if combat then return false end
     self.novaActive=enabled and true or nil
     table.sort(entries,function(a,b) return a.key<b.key end)
-    local available=math.max(84,self.originalWidth*self.db.scale-32)
+    local available=math.max(84,self.originalWidth*self.windowDB.scale-32)
     local columns=math.max(1,math.floor(available/88))
     local rows=math.ceil(#entries/columns)
     local height=rows>0 and rows*22+2 or 0

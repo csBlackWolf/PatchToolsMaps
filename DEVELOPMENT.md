@@ -41,3 +41,5 @@ Push a branch commit first and wait for its webhook delivery before pushing a se
 Keep the README short and player-focused, usage in [GUIDE.md](GUIDE.md), and implementation details here or in the integration/data guides. Review GitHub issues or the planning board only when requested; they are not a mandatory publication checkpoint.
 
 MIT; see [LICENSE.txt](LICENSE.txt). Keep the original notices when sharing code.
+
+Window position and scale use `PatchToolsMapsCharacterDB` (`SavedVariablesPerCharacter`). Import legacy account geometry once for each character; keep the legacy values as a migration seed without updating them. Resets affect only the current character. Other preferences, including opacity handling, retain their existing account storage.

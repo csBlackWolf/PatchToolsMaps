@@ -146,7 +146,7 @@ else
 end
 PT:SelectOptionsPage('general')
 assert(PT:SelectOptionsPage('missing')==false and PT.optionPages.general:IsShown())
-PatchToolsMapsDB={customFrame=false}
+PatchToolsMapsDB={customFrame=false,scale=1,x=.2,y=.8}
 local Maps={}
 for _,name in ipairs({'Locales.lua','OverlayData.lua','GeneratedCatalog.lua','GeneratedCatalogEra.lua','Reveal.lua','Zoom.lua','Nova.lua','Opacity.lua','Frame.lua','Actions.lua','Window.lua','Options.lua','Core.lua'}) do
     assert(loadfile(MAPS_PATH..name))('PatchToolsMaps',Maps)
@@ -154,6 +154,7 @@ end
 Event('ADDON_LOADED','PatchToolsMaps')
 assert(Maps.initialized and Maps.db.mode=='mist' and PT.optionPages.maps)
 assert(Maps.db.extendedZoom==true,'new installations enable map zoom by default')
+assert(Maps.windowDB==PatchToolsMapsCharacterDB and Maps.windowDB.x==.2 and Maps.windowDB.y==.8)
 assert(PT.optionPages.maps and not PT.mapsPlaceholder)
 if legacyPlaceholder then assert(not legacyPlaceholder:IsShown()) end
 assert(PT.optionNavigation.maps.points[1][3]>PT.optionNavigation.about.points[1][3])
@@ -344,14 +345,14 @@ if era then assert(not PT.optionPages.phase and not PT.optionNavigation.phase) e
 layer=oldLayer; artID=56; explored={}; Maps.db.knownOverlays={}
 -- Window scale, reset, fullscreen and combat deferral.
 local function WindowFactor() return era and map:GetWidth()/Maps.originalWidth or map:GetScale()/Maps.originalScale end
-Maps.db.scale=1.3; Maps:Refresh(); assert(math.abs(WindowFactor()-1.3)<.00001)
+Maps.windowDB.scale=1.3; Maps:Refresh(); assert(math.abs(WindowFactor()-1.3)<.00001)
 map:Maximize(); assert(map.scale==1 and not Maps.dragBar:IsShown())
 map:Minimize(); assert(math.abs(WindowFactor()-1.3)<.00001 and Maps.dragBar:IsShown())
-combat=true; Maps.db.scale=.8; Maps:Refresh(); assert(math.abs(WindowFactor()-1.3)<.00001)
+combat=true; Maps.windowDB.scale=.8; Maps:Refresh(); assert(math.abs(WindowFactor()-1.3)<.00001)
 Maps.db.extendedZoom=true; Maps:Refresh(true); assert(#scroll.zoomLevels==2)
 combat=false; Event('PLAYER_REGEN_ENABLED'); assert(math.abs(WindowFactor()-.8)<.00001 and #scroll.zoomLevels==2)
 Maps.dragBar.scripts.OnDragStart(); assert(Maps.moving)
-Maps.dragBar.scripts.OnDragStop(); assert(not Maps.moving and Maps.db.x and Maps.db.y)
+Maps.dragBar.scripts.OnDragStop(); assert(not Maps.moving and Maps.windowDB.x and Maps.windowDB.y)
 Maps.dragBar.scripts.OnDragStart()
 combat=true; Event('PLAYER_REGEN_DISABLED')
 assert(not Maps.moving and not Maps.moveDriver.scripts.OnUpdate)
@@ -361,9 +362,9 @@ assert(Maps.resizeGrip:IsShown() and not Maps.resizeGrip.scripts.OnUpdate)
 combat=false; Event('PLAYER_REGEN_ENABLED')
 Maps.resizeGrip.scripts.OnMouseDown(Maps.resizeGrip,'LeftButton')
 cursorX,cursorY=100000,-100000
-Maps.resizeGrip.scripts.OnUpdate(); assert(Maps.db.scale>1.5)
+Maps.resizeGrip.scripts.OnUpdate(); assert(Maps.windowDB.scale>1.5)
 Maps.resizeGrip.scripts.OnMouseUp(); assert(not Maps.resizeGrip.scripts.OnUpdate)
-Maps:ResetWindow(); assert(map.scale==1 and Maps.db.x==nil and Maps.db.y==nil)
+Maps:ResetWindow(); assert(map.scale==1 and Maps.windowDB.x==nil and Maps.windowDB.y==nil)
 -- Full reset is wired to the options button, including native view/zoom.
 local anchor=Maps.resizeGrip.points[1]
 assert(anchor[1]=='BOTTOMRIGHT' and anchor[2]==map and anchor[3]=='BOTTOMRIGHT')
@@ -371,17 +372,17 @@ assert(anchor[4]==2 and anchor[5]==-2)
 assert(Maps.resizeGrip.width==20 and Maps.resizeGrip.height==20)
 if era then assert(Maps.dragBar==WorldMapTitleButton and not Maps.ownsDragBar and nativeDragCalls>0 and Maps.dragBar.scripts.OnUpdate)
 else assert(Maps.dragBar.height==19 and #Maps.dragBar.points==2) end
-Maps.db.extendedZoom=true; Maps.db.scale=1.4; Maps.db.x=.4; Maps.db.y=.6
+Maps.db.extendedZoom=true; Maps.windowDB.scale=1.4; Maps.windowDB.x=.4; Maps.windowDB.y=.6
 Maps:Refresh(true); scroll.currentScale=4; scroll.panX,scroll.panY=.9,.1
 Maps.optionsUI.reset.scripts.OnClick()
 assert(not map:IsShown() and panelCloses==1)
 assert(secureCalls>=2)
-assert(map.scale==1 and Maps.db.x==nil and Maps.db.y==nil and Maps.db.extendedZoom)
+assert(map.scale==1 and Maps.windowDB.x==nil and Maps.windowDB.y==nil and Maps.db.extendedZoom)
 assert(#scroll.zoomLevels==2 and scroll.currentScale==1 and scroll.panX==.5 and scroll.panY==.5)
 assert(Maps.optionsUI.checks.extendedZoom.checked==true)
 map:Show()
 local resets=scroll.resets
-combat=true; Maps.db.extendedZoom=true; Maps.db.scale=1.2
+combat=true; Maps.db.extendedZoom=true; Maps.windowDB.scale=1.2
 Maps:ResetMap(); assert(scroll.resets==resets and Maps.resetViewPending and Maps.resetPending)
 assert(map:IsShown() and panelCloses==1) -- protected UI close waits for combat to end
 combat=false; Event('PLAYER_REGEN_ENABLED')
@@ -420,7 +421,7 @@ map:Show(); Maps.db.movable=true; Maps.db.resizable=true
 Maps.dragBar.scripts.OnDragStart()
 cursorX,cursorY=-100000,100000
 Maps.moveDriver.scripts.OnUpdate()
-assert(Maps.db.x<0 and Maps.db.y>1)
+assert(Maps.windowDB.x<0 and Maps.windowDB.y>1)
 Maps.dragBar.scripts.OnDragStop()
 Maps.db.extendedZoom=true; Maps.extraZoomScale=nil; scroll.currentScale=2
 local levels=scroll.zoomLevels
@@ -436,10 +437,10 @@ Wheel(1); assert(secureCalls==secureBefore and scroll.currentScale==2)
 SlashCmdList.PATCHTOOLSMAPS('reset')
 assert(Maps.resetPending and map:IsShown())
 combat=false; Event('PLAYER_REGEN_ENABLED')
-assert(not map:IsShown() and Maps.db.scale==1 and not Maps.db.x and not Maps.db.y)
-map:Show(); Maps.db.scale=5; Maps.db.x=-2; Maps.db.y=3; Maps:ApplyWindow()
+assert(not map:IsShown() and Maps.windowDB.scale==1 and not Maps.windowDB.x and not Maps.windowDB.y)
+map:Show(); Maps.windowDB.scale=5; Maps.windowDB.x=-2; Maps.windowDB.y=3; Maps:ApplyWindow()
 SlashCmdList.PATCHTOOLSMAPS('reset')
-assert(not map:IsShown() and Maps.db.scale==1 and not Maps.db.x and not Maps.db.y)
+assert(not map:IsShown() and Maps.windowDB.scale==1 and not Maps.windowDB.x and not Maps.windowDB.y)
 -- World/continent overviews may have exactly one native scale and no
 -- native wheel zoom. The addon must receive the actual registered event.
 for _,overview in ipairs({'world','continent'}) do
@@ -491,9 +492,9 @@ scroll.overview=nil
 print('PASS: live-reported four-level map zoom advances from minimum even when native wheel zoom is stalled.')
 -- Reopening with an off-screen saved position must not sanitize it back on-screen.
 Maps.initialized=false
-Maps.db.scale=5; Maps.db.x=-2; Maps.db.y=3
+Maps.windowDB.scale=5; Maps.windowDB.x=-2; Maps.windowDB.y=3
 Maps:Initialize()
-assert(Maps.db.scale==5 and Maps.db.x==-2 and Maps.db.y==3)
+assert(Maps.windowDB.scale==5 and Maps.windowDB.x==-2 and Maps.windowDB.y==3)
 
 Maps.initialized=false; Maps.db.extendedZoom=false; Maps:Initialize()
 assert(Maps.db.extendedZoom==false,"preserve explicit saved zoom preference")
@@ -509,7 +510,7 @@ if era then
         return (px/canvasScale-left)/width,(top-py/canvasScale)/height
     end
     for _,factor in ipairs({.6,1,1.3,2,5}) do
-        Maps.db.scale=factor; Maps:ApplyWindow()
+        Maps.windowDB.scale=factor; Maps:ApplyWindow()
         assert(map:GetEffectiveScale()==Maps.originalScale)
         assert(math.abs(map:GetWidth()-Maps.originalWidth*factor)<.00001)
         for _,canvasScale in ipairs({.75,1,2,4}) do
@@ -539,13 +540,13 @@ if era then
         scroll.zoomLevels={{scale=fit,layerIndex=1},{scale=2*fit,layerIndex=1}}
         scroll.currentScale=fit
     end
-    Maps.db.scale=1; Maps:ApplyWindow()
+    Maps.windowDB.scale=1; Maps:ApplyWindow()
     scroll.zoomLevels={{scale=1,layerIndex=1},{scale=2,layerIndex=1}}
     scroll.currentScale=3
-    Maps.db.extendedZoom=true; Maps.db.scale=2; Maps:ApplyWindow()
+    Maps.db.extendedZoom=true; Maps.windowDB.scale=2; Maps:ApplyWindow()
     assert(rebuilds==1 and scroll.currentScale==6 and Maps.extraZoomScale==6)
     Maps:ApplyWindow(); assert(rebuilds==1,'unchanged dimensions must not rebuild/reset zoom')
-    combat=true; Maps.db.scale=3; Maps:ApplyWindow()
+    combat=true; Maps.windowDB.scale=3; Maps:ApplyWindow()
     assert(rebuilds==1 and map:GetWidth()==2*Maps.originalWidth)
     combat=false; Maps:Refresh()
     assert(rebuilds==2 and scroll.currentScale==9)
@@ -555,7 +556,7 @@ end
 if era then
     combat=false; map.maximized=false; map:Show()
     for _,factor in ipairs({.6,1,1.3,2,5}) do
-        Maps.db.scale=factor; Maps:ApplyWindow()
+        Maps.windowDB.scale=factor; Maps:ApplyWindow()
         assert(map:GetScale()==Maps.originalScale,'canvas coordinate scale must stay native')
         assert(map.MiniBorderFrame:GetScale()==factor,'fixed native border artwork must grow with the viewport')
         assert(WorldMapTitleButton:GetScale()==factor and WorldMapFrameCloseButton:GetScale()==factor)
@@ -571,9 +572,9 @@ if era then
     map:Maximize()
     assert(map.MiniBorderFrame:GetScale()==1 and WorldMapFrameCloseButton:GetScale()==1)
     assert(scroll.points[1][4]==11 and scroll.points[1][5]==-70 and scroll.points[2][5]==28)
-    map:Minimize(); assert(map.MiniBorderFrame:GetScale()==Maps.db.scale)
+    map:Minimize(); assert(map.MiniBorderFrame:GetScale()==Maps.windowDB.scale)
     combat=true; local before=map.MiniBorderFrame:GetScale()
-    Maps.db.scale=1.7; Maps:ApplyWindow(); assert(map.MiniBorderFrame:GetScale()==before)
+    Maps.windowDB.scale=1.7; Maps:ApplyWindow(); assert(map.MiniBorderFrame:GetScale()==before)
     combat=false; Maps:Refresh(); assert(map.MiniBorderFrame:GetScale()==1.7)
     Maps:ResetMap(); assert(map.MiniBorderFrame:GetScale()==1 and WorldMapFrameCloseButton:GetScale()==1)
     assert(scroll.points[1][4]==20 and scroll.points[2][5]==28)
@@ -583,7 +584,7 @@ if era then
     -- Resize a zoomed/panned canvas using Era's native pan interpolation and
     -- viewport-dependent scroll getters. Neither repeated resets nor focus
     -- drift may be hidden by the simpler InstantPanAndZoom fixture above.
-    combat=false; map.maximized=false; Maps.db.scale=1; map:Show(); Maps:ApplyWindow()
+    combat=false; map.maximized=false; Maps.windowDB.scale=1; map:Show(); Maps:ApplyWindow()
     local fullRebuilds,fitUpdates=0,0
     local offsetX,offsetY=0,0
     local canvasWidth,canvasHeight=1000,700
@@ -713,7 +714,7 @@ end
 -- Alpha chrome: original button handlers/visibility survive docking, library
 -- relayouts and disabling; protected frames and combat mutations are rejected.
 if era then
-    combat=false; map.maximized=false; Maps.db.scale=1; map:Show()
+    combat=false; map.maximized=false; Maps.windowDB.scale=1; map:Show()
     C_Map.GetMapInfo=function(id) return {name='Test zone',mapID=id} end
     C_Map.GetBestMapForUnit=function() return 1453 end
     C_Map.GetPlayerMapPosition=function() return {GetXY=function() return .42,.61 end} end
@@ -742,14 +743,14 @@ if era then
     assert(questie:GetHeight()*questie:GetScale()==24,'toolbar icons should fit a single compact header')
     assert(Maps.customFrame.footer:GetHeight()==14,'empty info slots must not reserve a second footer row')
     for _,factor in ipairs({.6,1,1.6,3}) do
-        Maps.db.scale=factor; Maps:ApplyWindow()
+        Maps.windowDB.scale=factor; Maps:ApplyWindow()
         local width=map:GetWidth()+scroll.points[2][4]-scroll.points[1][4]
         local height=map:GetHeight()+scroll.points[1][5]-scroll.points[2][5]
         assert(math.abs(width/height-layer.layerWidth/layer.layerHeight)<.000001,
             'viewport must fit the map art without a blank side panel at any window size')
         assert(math.abs(map:GetHeight()-height-60)<.000001,'chrome overhead stays at 60 pixels')
     end
-    Maps.db.scale=1; Maps:ApplyWindow()
+    Maps.windowDB.scale=1; Maps:ApplyWindow()
     local originalArtWidth,originalArtHeight=layer.layerWidth,layer.layerHeight
     for _,dimensions in ipairs({{512,512},{1002,668},{512,256}}) do
         layer.layerWidth,layer.layerHeight=dimensions[1],dimensions[2]
@@ -1038,13 +1039,13 @@ if era then
     assert(toolbar.stacked and toolbar.rows>1 and toolbar.extraHeight==toolbar.rows*27)
     for _,item in pairs(toolbar.items) do assert(item.x+item.width<=482+.00001) end
     local _,top=Maps:GetCustomFrameInsets(500); assert(top==-36-toolbar.extraHeight)
-    local previousScale=Maps.db.scale
+    local previousScale=Maps.windowDB.scale
     for _,factor in ipairs({.6,1,2}) do
-        Maps.db.scale=factor; Maps:Refresh()
+        Maps.windowDB.scale=factor; Maps:Refresh()
         assert(math.abs(map:GetHeight()-Maps:GetCustomFrameHeight(map:GetWidth()))<.00001,
             'toolbar row changes must preserve the map viewport aspect ratio while resizing')
     end
-    Maps.db.scale=previousScale
+    Maps.windowDB.scale=previousScale
     -- Remove fixture-only registrations, preserving the live adapters.
     for i=#Maps.frameWidgets,oldWidgets+1,-1 do
         local entry=table.remove(Maps.frameWidgets,i); entry.frame:Hide(); Maps.mapActions[entry.id]=nil
@@ -1063,7 +1064,7 @@ if era then
     end)
     Maps.nativeCloseAppearance.mouse=true
     for _,factor in ipairs({.6,.7,1,2}) do
-        Maps.db.scale=factor; Maps:Refresh()
+        Maps.windowDB.scale=factor; Maps:Refresh()
         local close=Maps.customCloseButton
         assert(close:IsShown() and close:GetWidth()==32 and close:GetHeight()==32)
         local point,relative,relativePoint,x,y=close:GetPoint(1)
@@ -1082,3 +1083,19 @@ if era then
     WorldMapFrameCloseButton:SetScript('OnClick',originalClick)
     print('PASS: modern close position, fixed mouse bounds, native action forwarding and Classic/fullscreen restoration at small sizes.')
 end
+
+local account=PatchToolsMapsDB
+local first=Maps.windowDB
+first.scale=.7; first.x=.3; first.y=.9
+local register=PT.RegisterOptionsPage
+PT.RegisterOptionsPage=function() return false end
+PatchToolsMapsCharacterDB=nil; Maps.initialized=nil; Maps:Initialize()
+assert(Maps.windowDB~=first and Maps.windowDB.scale==1 and Maps.windowDB.x==.2)
+Maps.windowDB.scale=1.2
+PatchToolsMapsCharacterDB=first; Maps:Initialize()
+assert(Maps.windowDB.scale==.7 and Maps.windowDB.x==.3 and Maps.db==account)
+Maps:ResetWindow(); Maps:Initialize()
+assert(Maps.windowDB.scale==1 and Maps.windowDB.x==nil,'reset survives another initialization')
+assert(account.scale==1 and account.x==.2,'legacy global geometry remains unchanged')
+PT.RegisterOptionsPage=register
+print('PASS: map character migration, isolation and reset without importing old geometry again.')

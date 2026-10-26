@@ -70,18 +70,23 @@ function Maps:Initialize()
     end
     if type(PatchToolsMapsDB)~="table" then PatchToolsMapsDB={} end
     self.db=PatchToolsMapsDB
-    for key,value in pairs({movable=true,resizable=true,extendedZoom=true,scale=1,mode="mist"}) do
+    if type(PatchToolsMapsCharacterDB)~="table" then
+        PatchToolsMapsCharacterDB={scale=self.db.scale,x=self.db.x,y=self.db.y}
+    end
+    self.windowDB=PatchToolsMapsCharacterDB
+    if type(self.windowDB.scale)~="number" then self.windowDB.scale=1 end
+    for key,value in pairs({movable=true,resizable=true,extendedZoom=true,mode="mist"}) do
         if type(self.db[key])~=type(value) then self.db[key]=value end
     end
     if type(self.db.customFrame)~="boolean" then self.db.customFrame=PT.isClassicEra==true end
     if self.db.mode~="classic" and self.db.mode~="mist" and self.db.mode~="full" then self.db.mode="mist" end
-    local scale=self.db.scale
-    self.db.scale=scale==scale and scale<math.huge and math.max(.6,scale) or 1
+    local scale=self.windowDB.scale
+    self.windowDB.scale=scale==scale and scale<math.huge and math.max(.6,scale) or 1
     for _,key in ipairs({"x","y"}) do
-        local value=self.db[key]
-        if type(value)~="number" or value~=value or math.abs(value)==math.huge then self.db[key]=nil end
+        local value=self.windowDB[key]
+        if type(value)~="number" or value~=value or math.abs(value)==math.huge then self.windowDB[key]=nil end
     end
-    if not self.db.x or not self.db.y then self.db.x,self.db.y=nil,nil end
+    if not self.windowDB.x or not self.windowDB.y then self.windowDB.x,self.windowDB.y=nil,nil end
     if type(self.db.knownOverlays)~="table" then self.db.knownOverlays={} end
     for key,value in pairs(self.db.knownOverlays) do
         if type(value)~="table" then self.db.knownOverlays[key]=nil end

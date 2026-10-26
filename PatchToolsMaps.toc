@@ -4,11 +4,12 @@
 ## Notes: Optional world map controls for PatchTools.
 ## Notes-deDE: Optionale Weltkartenfunktionen für PatchTools.
 ## Author: Patch & Zen
-## Version: 0.3.0-alpha.14-local.1
+## Version: 0.3.0-alpha.14-local.2
 ## X-License: MIT
 ## X-Curse-Project-ID: 1761299
 ## Dependencies: PatchTools
 ## SavedVariables: PatchToolsMapsDB
+## SavedVariablesPerCharacter: PatchToolsMapsCharacterDB
 Locales.lua
 OverlayData.lua
 GeneratedCatalog.lua

@@ -78,5 +78,5 @@ function Maps:UpdateOptions()
     ui.opacity:SetValue(transparency)
     ui.opacityText:SetText(self:T("TRANSPARENCY",transparency))
     self.updatingOpacity=nil
-    ui.scale:SetText(self:T("SCALE",math.floor(self.db.scale*100+.5)))
+    ui.scale:SetText(self:T("SCALE",math.floor(self.windowDB.scale*100+.5)))
 end

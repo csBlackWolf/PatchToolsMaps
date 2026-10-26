@@ -313,7 +313,7 @@ function Maps:LayoutCustomFrame()
         for _,entry in ipairs(self.frameControls) do
             Restore(entry)
             local maximized=self.map.IsMaximized and self.map:IsMaximized()
-            entry.frame:SetScale(entry.scale*(maximized and 1 or self.db.scale))
+            entry.frame:SetScale(entry.scale*(maximized and 1 or self.windowDB.scale))
         end
         self.customControlsPlaced=nil
     end

@@ -8,8 +8,8 @@ function Maps:SavePosition()
     local left,top=map:GetLeft(),map:GetTop()
     if not left or not top then return end
     local ratio=map:GetEffectiveScale()/UIParent:GetEffectiveScale()
-    self.db.x=left*ratio/UIParent:GetWidth()
-    self.db.y=top*ratio/UIParent:GetHeight()
+    self.windowDB.x=left*ratio/UIParent:GetWidth()
+    self.windowDB.y=top*ratio/UIParent:GetHeight()
 end
 function Maps:ApplyEraChrome(factor,maximized)
     if not self.eraChrome then return false end
@@ -127,18 +127,18 @@ function Maps:ApplyWindow()
         -- Era's native cursor conversion assumes the window's original scale.
         -- Change the viewport dimensions instead of scaling its coordinate space.
         map:SetScale(self.originalScale)
-        local width,height=self.originalWidth*self.db.scale,self.originalHeight*self.db.scale
+        local width,height=self.originalWidth*self.windowDB.scale,self.originalHeight*self.windowDB.scale
         if self.customFrame and self:UseCustomFrame() then height=self:GetCustomFrameHeight(width) end
         resized=math.abs(map:GetWidth()-width)>.01 or math.abs(map:GetHeight()-height)>.01
         if resized then map:SetSize(width,height) end
-        resized=self:ApplyEraChrome(self.db.scale,false) or resized
+        resized=self:ApplyEraChrome(self.windowDB.scale,false) or resized
     else
-        map:SetScale(self.originalScale*self.db.scale)
+        map:SetScale(self.originalScale*self.windowDB.scale)
     end
-    if self.db.x and self.db.y then
+    if self.windowDB.x and self.windowDB.y then
         local ratio=UIParent:GetEffectiveScale()/map:GetEffectiveScale()
         map:ClearAllPoints()
-        map:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",self.db.x*UIParent:GetWidth()*ratio,self.db.y*UIParent:GetHeight()*ratio)
+        map:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",self.windowDB.x*UIParent:GetWidth()*ratio,self.windowDB.y*UIParent:GetHeight()*ratio)
     end
     map:SetClampedToScreen(false)
     if self.ownsDragBar then self.dragBar:SetShown(self.db.movable) end
@@ -149,7 +149,7 @@ function Maps:ApplyWindow()
     end
 end
 function Maps:ResetWindow()
-    self.db.scale,self.db.x,self.db.y=1,nil,nil
+    self.windowDB.scale,self.windowDB.x,self.windowDB.y=1,nil,nil
     if not self:CanChangeWindow() then self.resetPending=true; return end
     self.resetPending=nil
     local map=self.map
@@ -225,15 +225,15 @@ function Maps:InstallWindow(map)
         if map.StopMovingOrSizing then map:StopMovingOrSizing() end
         self:SavePosition()
         local x,y=GetCursorPosition()
-        local startX,startY=self.db.x,self.db.y
+        local startX,startY=self.windowDB.x,self.windowDB.y
         if not startX or not startY then return end
         self.moving=true
         driver:SetScript("OnUpdate",function()
             if not self:CanChangeWindow() then driver:SetScript("OnUpdate",nil); self.moving=nil; return end
             local cx,cy=GetCursorPosition()
             local scale=UIParent:GetEffectiveScale()
-            self.db.x=startX+(cx-x)/scale/UIParent:GetWidth()
-            self.db.y=startY+(cy-y)/scale/UIParent:GetHeight()
+            self.windowDB.x=startX+(cx-x)/scale/UIParent:GetWidth()
+            self.windowDB.y=startY+(cy-y)/scale/UIParent:GetHeight()
             self:ApplyWindow()
         end)
     end
@@ -268,7 +268,7 @@ function Maps:InstallWindow(map)
         self.resizing=true
         if GameTooltip then GameTooltip:Hide() end
         local x,y=GetCursorPosition()
-        local start=self.db.scale
+        local start=self.windowDB.scale
         local width=map:GetWidth()*map:GetEffectiveScale()
         local height=map:GetHeight()*map:GetEffectiveScale()
         grip:SetScript("OnUpdate",function()
@@ -278,7 +278,7 @@ function Maps:InstallWindow(map)
             if not self:CanChangeWindow() then self:FinishResize(); return end
             local cx,cy=GetCursorPosition()
             local delta=((cx-x)*width+(y-cy)*height)/(width*width+height*height)
-            self.db.scale=math.max(.6,start*(1+delta))
+            self.windowDB.scale=math.max(.6,start*(1+delta))
             self:ApplyWindow()
         end)
     end)

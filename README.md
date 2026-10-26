@@ -24,7 +24,7 @@ _Your world map, with more freedom. The map module for PatchTools, for Classic E
 
 You can also use `/patchtoolsmaps` instead of `/ptmaps`.
 
-[Download on CurseForge](https://www.curseforge.com/wow/addons/patchtoolsmaps) · [Source code and bug reports](https://github.com/csBlackWolf/PatchToolsMaps)
+[Download on CurseForge](https://www.curseforge.com/wow/addons/patchtoolsmaps) · [Source code](https://github.com/csBlackWolf/PatchToolsMaps) · [Bug reports and ideas](https://github.com/csBlackWolf/PatchTools/issues/new/choose)
 
 [Detailed user guide](GUIDE.md) · [Developer guide](DEVELOPMENT.md)
 
@@ -56,6 +56,6 @@ _Deine Weltkarte mit mehr Freiheiten. Das Kartenmodul für PatchTools, für Clas
 
 Statt `/ptmaps` funktioniert auch `/patchtoolsmaps`.
 
-[Download auf CurseForge](https://www.curseforge.com/wow/addons/patchtoolsmaps) · [Quellcode und Fehlerberichte](https://github.com/csBlackWolf/PatchToolsMaps)
+[Download auf CurseForge](https://www.curseforge.com/wow/addons/patchtoolsmaps) · [Quellcode](https://github.com/csBlackWolf/PatchToolsMaps) · [Fehler und Ideen melden](https://github.com/csBlackWolf/PatchTools/issues/new/choose)
 
 [Ausführliche Bedienungsanleitung](GUIDE.md) · [Entwicklerinfos](DEVELOPMENT.md)

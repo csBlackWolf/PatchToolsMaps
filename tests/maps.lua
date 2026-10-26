@@ -1052,3 +1052,33 @@ if era then
     Maps:Refresh(); assert(not Maps:GetToolbarLayout(2000).stacked)
     print('PASS: simple icon action API, click/state/visibility updates, duplicate validation and title-above-toolbar wrapping without horizontal overflow.')
 end
+
+if era then
+    combat=false; map.maximized=false; Maps.db.customFrame=true
+    local originalClick=WorldMapFrameCloseButton:GetScript('OnClick')
+    local forwarded=0
+    WorldMapFrameCloseButton:SetScript('OnClick',function(button,mouse)
+        assert(button==WorldMapFrameCloseButton and mouse=='LeftButton')
+        forwarded=forwarded+1
+    end)
+    Maps.nativeCloseAppearance.mouse=true
+    for _,factor in ipairs({.6,.7,1,2}) do
+        Maps.db.scale=factor; Maps:Refresh()
+        local close=Maps.customCloseButton
+        assert(close:IsShown() and close:GetWidth()==32 and close:GetHeight()==32)
+        local point,relative,relativePoint,x,y=close:GetPoint(1)
+        assert(point=='TOPRIGHT' and relative==map and relativePoint=='TOPRIGHT' and x==-4 and y==-3)
+        assert(close:GetScale()==1,'close hit area stays in the modern header coordinate system')
+        assert(not WorldMapFrameCloseButton:IsMouseEnabled() and WorldMapFrameCloseButton:GetAlpha()==0)
+        close.scripts.OnClick()
+    end
+    assert(forwarded==4,'modern close keeps the original close action')
+    Maps.db.customFrame=false; Maps:Refresh()
+    assert(not Maps.customCloseButton:IsShown() and WorldMapFrameCloseButton:IsMouseEnabled())
+    assert(WorldMapFrameCloseButton:GetAlpha()==Maps.nativeCloseAppearance.alpha)
+    Maps.db.customFrame=true; Maps:Refresh()
+    map:Maximize(); assert(not Maps.customCloseButton:IsShown())
+    map:Minimize(); assert(Maps.customCloseButton:IsShown())
+    WorldMapFrameCloseButton:SetScript('OnClick',originalClick)
+    print('PASS: modern close position, fixed mouse bounds, native action forwarding and Classic/fullscreen restoration at small sizes.')
+end

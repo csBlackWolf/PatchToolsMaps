@@ -1,3 +1,8 @@
+# PatchToolsMaps 0.3.0-alpha.14-local.1 — local test — 2026-10-26
+
+- Use a fixed-size foreground close button in the modern header, forwarding the native close action. Prevent the legacy close control and adopted addon buttons from intercepting its clicks at small sizes.
+- Restore the native close control in Classic/fullscreen. Map coordinates and pins are unchanged.
+
 # PatchToolsMaps 0.3.0-alpha.13 — 2026-10-25
 
 **Public alpha test: this version is likely to contain bugs. Please report problems and feedback on GitHub. Use the stable releases if you prefer the established feature set.**

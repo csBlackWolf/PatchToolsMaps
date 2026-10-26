@@ -185,6 +185,29 @@ function Maps:InstallCustomFrame(map)
     frame:SetAllPoints(map)
     frame:SetFrameLevel(map:GetFrameLevel()+1)
     frame:EnableMouse(false)
+    -- The legacy close control can retain an overlapping mouse region when
+    -- the small-map chrome is resized. Use an explicitly sized foreground
+    -- control for Modern, forwarding the original close action unchanged.
+    local close=CreateFrame("Button",nil,frame)
+    self.customCloseButton=close
+    close:SetSize(32,32); close:SetScale(1)
+    close:SetPoint("TOPRIGHT",map,"TOPRIGHT",-4,-3)
+    close:SetFrameLevel(map:GetFrameLevel()+30)
+    close:SetFrameStrata("TOOLTIP") -- Above adopted toolbar buttons, including Krowi's Era buttons.
+    close:SetNormalTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Up")
+    close:SetPushedTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Down")
+    close:SetHighlightTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Highlight")
+    close:RegisterForClicks("LeftButtonUp")
+    close:SetScript("OnClick",function()
+        local native=WorldMapFrameCloseButton
+        local click=native and native:GetScript("OnClick")
+        if click then click(native,"LeftButton")
+        elseif HideUIPanel then HideUIPanel(map)
+        else map:Hide() end
+    end)
+    if WorldMapFrameCloseButton then
+        self.nativeCloseAppearance={alpha=WorldMapFrameCloseButton:GetAlpha(),mouse=WorldMapFrameCloseButton:IsMouseEnabled()}
+    end
     frame:SetBackdrop({bgFile="Interface\\Buttons\\WHITE8X8",
         edgeFile="Interface\\Tooltips\\UI-Tooltip-Border",edgeSize=10,
         insets={left=2,right=2,top=2,bottom=2}})
@@ -274,6 +297,11 @@ function Maps:LayoutCustomFrame()
     self:UpdateMapActions()
     self:UpdateNovaTimers()
     self.customFrame:SetShown(enabled)
+    self.customCloseButton:SetShown(enabled)
+    if WorldMapFrameCloseButton and self.nativeCloseAppearance then
+        WorldMapFrameCloseButton:SetAlpha(enabled and 0 or self.nativeCloseAppearance.alpha)
+        WorldMapFrameCloseButton:EnableMouse(not enabled and self.nativeCloseAppearance.mouse)
+    end
     for _,entry in ipairs(self.frameArt) do entry.region:SetAlpha(enabled and 0 or entry.alpha) end
     if enabled then
         for _,entry in ipairs(self.frameControls) do

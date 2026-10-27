@@ -1,3 +1,8 @@
+# PatchToolsMaps 0.3.0-alpha.16-local.2 — local Era patch data update — 2026-10-27
+
+- Restore unexplored-area display modes for Classic Era client 1.15.9.70576 with a newly extracted, verified catalog. Retain support for the earlier Era build and Forever.
+- Automated mode and texture-size checks passed. In-game confirmation is pending. Local test only.
+
 # PatchToolsMaps 0.3.0-alpha.16-local.1 — local combat geometry test — 2026-10-27
 
 - Use Blizzard's ordinary XML close button directly, avoiding a protected action child that implicitly locks the map's geometry in combat.

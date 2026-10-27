@@ -18,5 +18,6 @@ ignore:
   - RESEARCH.md
   - CATALOG-MANIFEST.json
   - CATALOG-MANIFEST-ERA.json
+  - CATALOG-MANIFEST-ERA-70576.json
 
 manual-changelog: CHANGELOG.md

@@ -243,7 +243,7 @@ PT:SelectOptionsPage('general')
 assert(PT:SelectOptionsPage('missing')==false and PT.optionPages.general:IsShown())
 PatchToolsMapsDB={customFrame=false,scale=1,x=.2,y=.8}
 local Maps={}
-for _,name in ipairs({'Locales.lua','OverlayData.lua','GeneratedCatalog.lua','GeneratedCatalogEra.lua','Reveal.lua','Zoom.lua','Nova.lua','Opacity.lua','Frame.lua','Actions.lua','Window.lua','Options.lua','Core.lua'}) do
+for _,name in ipairs({'Locales.lua','OverlayData.lua','GeneratedCatalog.lua','GeneratedCatalogEra.lua','GeneratedCatalogEra70576.lua','Reveal.lua','Zoom.lua','Nova.lua','Opacity.lua','Frame.lua','Actions.lua','Window.lua','Options.lua','Core.lua'}) do
     assert(loadfile(MAPS_PATH..name))('PatchToolsMaps',Maps)
 end
 Event('ADDON_LOADED','PatchToolsMaps')
@@ -425,6 +425,20 @@ explored=Maps:GetCatalog(fixtureArt,1,layer); Maps:RefreshReveal()
 assert(not Maps.textures[1]:IsShown())
 assert(#Maps:GetCatalog(fixtureArt,2,layer)==0)
 local savedBuild=GetBuildInfo
+if era then
+    GetBuildInfo=function() return '1.15.9','70576','',11509 end
+    explored={}; Maps.db.knownOverlays={}
+    assert(#Maps:GetCatalog(fixtureArt,1,layer)>0,'current Era patch must have its verified catalog')
+    for _,mode in ipairs({'classic','mist','full'}) do
+        Maps.db.mode=mode; Maps:RefreshReveal()
+        if mode=='classic' then assert(not Maps.textures[1]:IsShown())
+        else assert(Maps.textures[1]:IsShown() and Maps.textures[1].alpha==(mode=='mist' and .5 or 1)) end
+    end
+    local id,size=next(Maps.catalogTextureSizes[70576])
+    local fw,fh=Maps:TextureSize(id,1,1)
+    assert(fw==size[1] and fh==size[2],'current client texture edge dimensions must be preserved')
+    Maps.db.mode='mist'
+end
 function GetBuildInfo() return '1.60.1','99999','',16001 end
 assert(#Maps:GetCatalog(fixtureArt,1,layer)==0)
 GetBuildInfo=savedBuild

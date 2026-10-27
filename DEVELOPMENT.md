@@ -20,7 +20,7 @@ Prefer small toolbar icons for addon toggles, with state in tooltips. Keep geogr
 
 ## Map data
 
-Catalogs are generated from client data and selected by client build, map art, layer and geometry. The Forever beta catalog originated from build 70532; Era build 70003 has a separate catalog and manifest. Reference game textures rather than distributing their image files. The exploration cache uses the same isolation and does not record player names, routes or chat.
+Catalogs are generated from client data and selected by client build, map art, layer and geometry. The Forever beta catalog originated from build 70532; Era builds 70003 and 70576 have separate catalogs and manifests. The 70576 data was re-extracted from the installed client and its referenced texture headers were checked; runtime selection still requires the exact build, art and layer geometry. Reference game textures rather than distributing their image files. The exploration cache uses the same isolation and does not record player names, routes or chat.
 
 Skip records with missing texture tiles, undrawable or inconsistent geometry, unsupported conditions or runtime hover-only/top-layer data. Preserve the native display when no matching data exists. Cosmetic reveal must never change exploration state, XP or achievements. Ordinary flags 0 and 4 occur in the sampled Forever data; flag 4 still requires visual checking rather than assuming its meaning.
 

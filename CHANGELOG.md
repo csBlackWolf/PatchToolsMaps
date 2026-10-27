@@ -1,17 +1,14 @@
-# PatchToolsMaps 0.3.0-alpha.15-local.2 — local combat layout and Escape fix
+# PatchToolsMaps 0.3.0-alpha.15 — 2026-10-27
 
-- Keep already docked, unprotected addon buttons in the modern toolbar when their library resets anchors during combat.
-- Restore the last applied viewport insets without moving or resizing the protected map, reparenting widgets, or moving protected controls.
-- Let Escape use the secure native close action while the modern map is visible. Release the temporary binding as soon as the map closes or switches to Classic/fullscreen.
+Public alpha test: bugs are possible. The stable release remains available.
 
-Classic Era/Forever integration checks passed. In-game combat layout and Escape confirmation are pending. This is a local test build.
+- Close the modern map during combat using its X button or Escape.
+- Improve the placement of addon buttons when opening the map during combat, including buttons loaded later by Questie and ATT.
+- Preserve the larger close-button hit area at small map sizes.
 
-# PatchToolsMaps 0.3.0-alpha.15-local.1 — local combat-close fix
+Please test opening, closing and reopening the map during combat with your usual map addons. X and Escape were confirmed locally in Classic Era; the latest toolbar correction still needs broader in-game testing. Automated checks passed for Classic Era and Forever.
 
-- Allow the modern frame's X button to close a map opened during combat through Blizzard's secure native close action.
-- Keep the larger hit area at small map sizes. Movement, resizing and extended zoom retain their existing combat deferral.
-
-Automated Classic Era/Forever integration checks passed, including combat close/reopen and classic/fullscreen restoration. In-game combat confirmation is pending. This is a local test build.
+Recommended companion: PatchTools 0.9.0-alpha.14. Report problems in the [PatchTools issue tracker](https://github.com/csBlackWolf/PatchTools/issues).
 
 # PatchToolsMaps 0.3.0-alpha.14 — 2026-10-26
 

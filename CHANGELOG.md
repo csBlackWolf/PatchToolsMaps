@@ -1,10 +1,14 @@
-# PatchToolsMaps 0.3.0-alpha.17-local.1 — local combat interaction preview — 2026-10-27
+# PatchToolsMaps 0.3.0-alpha.17 — 2026-10-27
 
-- Allow extended wheel zoom, moving and resizing in Classic Era combat when the map, scroll container and canvas are unprotected.
-- Preserve the zoom while resizing and keep the live toolbar layout aligned.
-- Stop gestures if protection appears. Keep protected frames, Forever, resets and frame-style changes deferred until combat ends.
+Public alpha test: bugs are possible. The stable release remains available.
 
-Automated Era/Forever tests passed, including combat gestures and protection appearing mid-resize. In-game combat confirmation is pending. Local preview only.
+- Zoom, move and resize the Classic Era map during combat when its frames are unprotected.
+- Keep the zoom and toolbar aligned while resizing.
+- Stop window gestures if another addon protects the map. Protected frames, Forever window changes, resets and frame-style changes still wait until combat ends.
+
+Initial combat testing in Classic Era was successful. Automated Classic Era/Forever checks passed, including protection appearing during a resize. Please test with your usual map addons and report problems in the [PatchTools issue tracker](https://github.com/csBlackWolf/PatchTools/issues).
+
+Recommended companion: PatchTools 0.9.0-alpha.14.
 
 # PatchToolsMaps 0.3.0-alpha.16 — 2026-10-27
 

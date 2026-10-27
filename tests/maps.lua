@@ -33,7 +33,7 @@ local function Widget(parent)
     end
     function methods:RegisterEvent(k) self.events[k]=true end
     function methods:SetSize(x,y)
-        assert(not (combat and rawget(self,'protected')),'do not resize protected frames in combat')
+        assert(not (combat and self:IsProtected()),'do not resize protected frames in combat')
         self.width,self.height=x,y
     end
     function methods:SetWidth(x) self.width=x end
@@ -42,7 +42,7 @@ local function Widget(parent)
     function methods:GetHeight() return self.height end
     function methods:GetSize() return self.width,self.height end
     function methods:SetPoint(...)
-        assert(not (combat and rawget(self,'protected')),'do not reanchor protected frames in combat')
+        assert(not (combat and self:IsProtected()),'do not reanchor protected frames in combat')
         self.points[#self.points+1]={...}
     end
     function methods:ClearAllPoints() self.points={} end
@@ -53,7 +53,19 @@ local function Widget(parent)
     function methods:IsOwned(owner) return self.owner==owner end
     function methods:SetParent(parent) self.parent=parent end
     function methods:GetName() return rawget(self,"name") end
-    function methods:IsProtected() return rawget(self,"protected")==true end
+    function methods:IsProtected()
+        if rawget(self,"protected")==true then return true end
+        for _,child in ipairs(frames) do
+            if HasTemplate(child,'SecureActionButtonTemplate') then
+                local parent=rawget(child,'parent')
+                while parent do
+                    if parent==self then return true end
+                    parent=rawget(parent,'parent')
+                end
+            end
+        end
+        return false
+    end
     function methods:GetAlpha() return rawget(self,"alpha") or 1 end
     function methods:IsMouseOver() return false end
     function methods:IsMouseEnabled() return rawget(self,"mouse")==true end
@@ -71,6 +83,11 @@ local function Widget(parent)
             assert(self:GetAttribute('type')=='click')
             local previous=secureHardwareClick; secureHardwareClick=true
             self:GetAttribute('clickbutton'):Click(button or 'LeftButton')
+            secureHardwareClick=previous
+        elseif HasTemplate(self,'UIPanelCloseButton') then
+            if down then return end
+            local previous=secureHardwareClick; secureHardwareClick=true
+            HideUIPanel(self:GetParent())
             secureHardwareClick=previous
         elseif self.scripts.OnClick then self.scripts.OnClick(self,button or 'LeftButton',down) end
     end
@@ -141,7 +158,17 @@ UpdateSecureBindings=function()
     end
 end
 local function PressEscape()
-    if not escapeTarget then return false end
+    if not escapeTarget then
+        for _,name in ipairs(UISpecialFrames) do
+            local frame=_G[name]
+            if frame and frame:IsShown() then
+                local previous=secureHardwareClick; secureHardwareClick=true
+                HideUIPanel(frame); secureHardwareClick=previous
+                return true
+            end
+        end
+        return false
+    end
     escapeTarget.frame:Click(escapeTarget.button)
     return true
 end
@@ -1171,52 +1198,51 @@ end
 
 if era then
     combat=false; map.maximized=false; Maps.db.customFrame=true
-    local originalClick=WorldMapFrameCloseButton:GetScript('OnClick')
-    local forwarded=0
-    WorldMapFrameCloseButton:SetScript('OnClick',function(button,mouse)
-        assert(button==WorldMapFrameCloseButton and mouse=='LeftButton')
-        forwarded=forwarded+1
-        HideUIPanel(map)
-    end)
+    local nativeClick=WorldMapFrameCloseButton:GetScript('OnClick')
     Maps.nativeCloseAppearance.mouse=true
     for _,factor in ipairs({.6,.7,1,2}) do
-        Maps.windowDB.scale=factor; Maps:Refresh()
+        map:Show(); Maps.windowDB.scale=factor; Maps:Refresh()
         local close=Maps.customCloseButton
         assert(close:IsShown() and close:GetWidth()==32 and close:GetHeight()==32)
         local point,relative,relativePoint,x,y=close:GetPoint(1)
         assert(point=='TOPRIGHT' and relative==map and relativePoint=='TOPRIGHT' and x==-4 and y==-3)
-        assert(close:GetScale()==1,'close hit area stays in the modern header coordinate system')
-        assert(not WorldMapFrameCloseButton:IsMouseEnabled() and WorldMapFrameCloseButton:GetAlpha()==0)
-        close:Click('LeftButton')
+        assert(close:GetScale()==1,'close hit area stays fixed')
+        assert(HasTemplate(close,'UIPanelCloseButton') and not HasTemplate(close,'SecureActionButtonTemplate'))
+        assert(close:GetParent()==map and not map:IsProtected(),'our close control must not protect the map')
+        assert(close:GetScript('OnClick')==nil,'retain the inherited XML handler without addon click forwarding')
+        close:Click('LeftButton'); assert(not map:IsShown())
     end
-    assert(forwarded==4,'modern close keeps the original close action')
-    assert(HasTemplate(Maps.customCloseButton,'SecureActionButtonTemplate'))
-    assert(Maps.customCloseButton:GetAttribute('clickbutton')==WorldMapFrameCloseButton)
+    map:Show(); Maps.windowDB.x=.17; Maps.windowDB.y=.82; Maps:Refresh()
+    local width,height=map:GetSize()
+    local wanted={map:GetPoint(1)}
     combat=true
     for _=1,2 do
         map:Show()
-        Maps.customCloseButton:Click('LeftButton',true)
-        assert(map:IsShown(),'close acts once on release, independent of action-key preferences')
-        Maps.customCloseButton:Click('LeftButton')
-        assert(not map:IsShown(),'a map opened during combat can close immediately through the native action')
+        -- Native Minimize resets dimensions and the panel manager resets anchors
+        -- after OnShow. This is distinct from resetting only the canvas insets.
+        map:SetSize(610,438); map:ClearAllPoints(); map:SetPoint('TOPLEFT',UIParent,'TOPLEFT',0,-104)
+        scroll:ClearAllPoints(); scroll:SetPoint('TOPLEFT',map,'TOPLEFT',20,-22)
+        scroll:SetPoint('BOTTOMRIGHT',map,'BOTTOMRIGHT',-10,28)
+        Maps:Refresh()
+        assert(map:GetWidth()==width and map:GetHeight()==height,'combat opening restores saved outer dimensions')
+        local actual={map:GetPoint(1)}
+        for i=1,5 do assert(actual[i]==wanted[i],'combat opening restores saved window position') end
+        assert(scroll.points[1][4]==4 and scroll.points[1][5]==-36,'combat canvas remains aligned')
+        Maps.customCloseButton:Click('LeftButton',true); assert(map:IsShown())
+        Maps.customCloseButton:Click('LeftButton'); assert(not map:IsShown(),'native XML close works in combat')
     end
-    assert(forwarded==6)
-    map:Show()
-    assert(escapeTarget and escapeTarget.frame==Maps.customCloseButton)
-    assert(PressEscape() and not map:IsShown(),'Escape securely closes a map opened in combat')
-    assert(not escapeTarget and not PressEscape(),'normal Escape resumes after the map closes')
-    map:Show(); assert(PressEscape() and not map:IsShown(),'Escape also works after reopening in combat')
-    combat=false
-    map:Show()
+    map:Show(); assert(PressEscape() and not map:IsShown(),'native Escape closes in combat')
+    assert(not escapeTarget,'no override binding should remain')
+    map.protected=true; map.width=610
+    Maps:RestoreCombatWindow(); assert(map:GetWidth()==610,'respect protection introduced by other addons')
+    map.protected=nil; combat=false; map:Show(); Maps:Refresh()
     Maps.db.customFrame=false; Maps:Refresh()
-    assert(not escapeTarget,'the modern map must not capture Escape in Classic mode')
     assert(not Maps.customCloseButton:IsShown() and WorldMapFrameCloseButton:IsMouseEnabled())
-    assert(WorldMapFrameCloseButton:GetAlpha()==Maps.nativeCloseAppearance.alpha)
+    assert(WorldMapFrameCloseButton:GetScript('OnClick')==nativeClick)
     Maps.db.customFrame=true; Maps:Refresh()
     map:Maximize(); assert(not Maps.customCloseButton:IsShown())
     map:Minimize(); assert(Maps.customCloseButton:IsShown())
-    WorldMapFrameCloseButton:SetScript('OnClick',originalClick)
-    print('PASS: modern close position, fixed mouse bounds, secure native action in combat, key-down independence and Classic/fullscreen restoration.')
+    print('PASS: unprotected native close, saved combat window dimensions/position, native Escape and Classic/fullscreen restoration.')
 end
 
 local account=PatchToolsMapsDB

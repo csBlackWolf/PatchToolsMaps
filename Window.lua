@@ -147,6 +147,34 @@ function Maps:ApplyWindow()
     if self.eraChrome and (resized or (self.viewportRebuildPending and not self.resizing)) then
         self:RefreshEraViewport(view)
     end
+    if self.customFrame and self:UseCustomFrame() then
+        local points={}
+        for i=1,map:GetNumPoints() do points[i]={map:GetPoint(i)} end
+        self.combatWindow={width=map:GetWidth(),height=map:GetHeight(),scale=map:GetScale(),points=points}
+    else self.combatWindow=nil end
+end
+
+function Maps:RestoreCombatWindow()
+    local map,layout=self.map,self.combatWindow
+    if not map or not layout or not self:UseCustomFrame() or map:IsProtected() then return end
+    -- Restore only the layout prepared before combat. Moving/resizing by the
+    -- player remains deferred, and another addon's protected children win.
+    local resized=map:GetWidth()~=layout.width or map:GetHeight()~=layout.height
+    if map:GetScale()~=layout.scale then map:SetScale(layout.scale) end
+    if resized then map:SetSize(layout.width,layout.height) end
+    local changed=map:GetNumPoints()~=#layout.points
+    for i,point in ipairs(layout.points) do
+        local current={map:GetPoint(i)}
+        for j=1,5 do if current[j]~=point[j] then changed=true; break end end
+    end
+    if changed then
+        map:ClearAllPoints()
+        for _,point in ipairs(layout.points) do map:SetPoint(unpack(point)) end
+    end
+    self:RestoreCombatFrame()
+    if resized and not map.ScrollContainer:IsProtected() and type(map.OnFrameSizeChanged)=="function" then
+        map:OnFrameSizeChanged()
+    end
 end
 function Maps:ResetWindow()
     self.windowDB.scale,self.windowDB.x,self.windowDB.y=1,nil,nil

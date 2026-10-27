@@ -8,7 +8,7 @@ function Maps:Refresh(rebuildZoom)
     if not self.map then self:Attach(); return end
     if self.customFrame and not (InCombatLockdown and InCombatLockdown()) then self:DiscoverFrameWidgets() end
     if self.resetPending then self:ResetWindow() else self:ApplyWindow() end
-    if InCombatLockdown and InCombatLockdown() then self:RestoreCombatFrame() end
+    if InCombatLockdown and InCombatLockdown() then self:RestoreCombatWindow(); self:RestoreCombatFrame() end
     self:ApplyMapOpacity()
     if self.zoomPending and not (InCombatLockdown and InCombatLockdown()) and self.map:IsShown()
         and self.map.ScrollContainer and type(self.map.ScrollContainer.zoomLevels)=="table"
@@ -119,6 +119,7 @@ events:SetScript("OnEvent",function(_,event,name)
             Maps:Attach()
             if Maps.customFrame and not (InCombatLockdown and InCombatLockdown()) then
                 Maps:DiscoverFrameWidgets(); Maps:LayoutCustomFrame()
+                if event=="PLAYER_LOGIN" then Maps:ApplyWindow() end
             end
         elseif event=="CVAR_UPDATE" then
             if type(name)=="string" and name:lower():gsub("_","")=="worldmapopacity" then

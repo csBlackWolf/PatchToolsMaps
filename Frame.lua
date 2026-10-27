@@ -229,35 +229,19 @@ function Maps:InstallCustomFrame(map)
     frame:SetAllPoints(map)
     frame:SetFrameLevel(map:GetFrameLevel()+1)
     frame:EnableMouse(false)
-    -- The legacy close control can retain an overlapping mouse region when
-    -- the small-map chrome is resized. Use an explicitly sized foreground
-    -- control for Modern. A normal addon OnClick taints HideUIPanel and is
-    -- blocked during combat. Forward the hardware click through Blizzard's
-    -- secure action template instead of calling the native script ourselves.
-    local nativeClose=WorldMapFrameCloseButton
-    if not nativeClose then
-        nativeClose=CreateFrame("Button",nil,map,"UIPanelCloseButton")
-        nativeClose:Hide()
-    end
-    local close=CreateFrame("Button","PatchToolsMapsModernCloseButton",frame,
-        "SecureActionButtonTemplate,SecureHandlerShowHideTemplate")
+    -- Use Blizzard's XML close handler directly. A secure action child would
+    -- implicitly protect the entire map and prevent combat layout restoration.
+    -- Parent this ordinary native close button to the map, not the chrome.
+    local close=CreateFrame("Button","PatchToolsMapsModernCloseButton",map,"UIPanelCloseButton")
     self.customCloseButton=close
     close:SetSize(32,32); close:SetScale(1)
     close:SetPoint("TOPRIGHT",map,"TOPRIGHT",-4,-3)
     close:SetFrameLevel(map:GetFrameLevel()+30)
-    close:SetFrameStrata("TOOLTIP") -- Above adopted toolbar buttons, including Krowi's Era buttons.
-    close:SetNormalTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Up")
-    close:SetPushedTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Down")
-    close:SetHighlightTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Highlight")
+    close:SetFrameStrata("TOOLTIP")
     close:RegisterForClicks("LeftButtonUp")
-    close:SetAttribute("useOnKeyDown",false)
-    close:SetAttribute("type","click")
-    close:SetAttribute("clickbutton",nativeClose)
-    -- These snippets execute through Blizzard's secure show/hide handlers,
-    -- including when the parent map opens or closes during combat. Never set
-    -- override bindings from an addon OnShow callback in combat.
-    close:SetAttribute("_onshow",[[self:SetBindingClick(true,"ESCAPE",self:GetName(),"LeftButton")]])
-    close:SetAttribute("_onhide",[[self:ClearBindings()]])
+    local listed=false
+    for _,name in ipairs(UISpecialFrames) do if name=="WorldMapFrame" then listed=true; break end end
+    if not listed then tinsert(UISpecialFrames,"WorldMapFrame") end
     if WorldMapFrameCloseButton then
         self.nativeCloseAppearance={alpha=WorldMapFrameCloseButton:GetAlpha(),mouse=WorldMapFrameCloseButton:IsMouseEnabled()}
     end

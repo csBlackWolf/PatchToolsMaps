@@ -1,3 +1,11 @@
+# PatchToolsMaps 0.3.0-alpha.16-local.1 — local combat geometry test — 2026-10-27
+
+- Use Blizzard's ordinary XML close button directly, avoiding a protected action child that implicitly locks the map's geometry in combat.
+- Use the normal Escape window list instead of temporary key overrides.
+- Restore the previously applied window dimensions and position after the native combat opening resets them. Respect protection introduced by other addons.
+
+Automated Era/Forever checks passed, including simulated native window resets. In-game size, position, X and Escape confirmation is pending. Local test only.
+
 # PatchToolsMaps 0.3.0-alpha.15 — 2026-10-27
 
 Public alpha test: bugs are possible. The stable release remains available.

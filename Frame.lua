@@ -133,8 +133,8 @@ function Maps:DiscoverFrameWidgets()
     self:DiscoverDeathlogControl()
     if not LibStub then return end
     local buttons=LibStub("Krowi_WorldMapButtons-1.4",true)
-    if buttons and type(buttons.Buttons)=="table" then
-        for _,button in ipairs(buttons.Buttons) do
+    if buttons then
+        for _,button in ipairs(type(buttons.Buttons)=="table" and buttons.Buttons or {}) do
             -- The library sometimes includes Blizzard's overlay buttons.
             -- Adopt only its own named buttons and ATT's standalone fallback.
             local name=button:GetName()
@@ -142,9 +142,26 @@ function Maps:DiscoverFrameWidgets()
                 self:RegisterFrameWidget(name,button,"buttons")
             end
         end
-        if self.buttonLibrary~=buttons and type(buttons.SetPoints)=="function" then
-            self.buttonLibrary=buttons
-            hooksecurefunc(buttons,"SetPoints",function() self:LayoutCustomFrame() end)
+        -- LibStub upgrades reuse the table but replace its functions. Track
+        -- those functions, too, so a later library copy cannot drop our hook.
+        if type(buttons.SetPoints)=="function" and self.buttonLibrarySetPoints~=buttons.SetPoints then
+            hooksecurefunc(buttons,"SetPoints",function()
+                if not (InCombatLockdown and InCombatLockdown()) then self:DiscoverFrameWidgets() end
+                self:LayoutCustomFrame()
+            end)
+            self.buttonLibrarySetPoints=buttons.SetPoints
+        end
+        if type(buttons.Add)=="function" and self.buttonLibraryAdd~=buttons.Add then
+            hooksecurefunc(buttons,"Add",function()
+                -- Questie and ATT create their buttons after ADDON_LOADED.
+                -- Wait one frame for the caller to finish setting size/art.
+                C_Timer.After(0,function()
+                    if not (InCombatLockdown and InCombatLockdown()) then
+                        self:DiscoverFrameWidgets(); self:LayoutCustomFrame()
+                    end
+                end)
+            end)
+            self.buttonLibraryAdd=buttons.Add
         end
     end
     if _G["AllTheThings-WorldMap"] then
@@ -304,7 +321,8 @@ end
 function Maps:UpdateFrameCoordinates()
     local frame=self.customFrame
     if not frame or not self:UseCustomFrame() then return end
-    local info=C_Map.GetMapInfo and C_Map.GetMapInfo(self.map:GetMapID())
+    local mapID=self.map:GetMapID()
+    local info=mapID and C_Map.GetMapInfo and C_Map.GetMapInfo(mapID)
     frame.title:SetText(info and info.name or WORLD_MAP or "PatchToolsMaps")
     local player,cursor="—","—"
     local playerMap=C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")

@@ -832,6 +832,31 @@ if era then
     Maps:Refresh()
     assert(questie.scripts.OnClick==handler); questie.scripts.OnClick(); assert(clicks==1)
     library.SetPoints(); assert(questie.points[1][2]==Maps.customFrame.buttons,'library relayout must return to dock')
+    -- Deferred addon initialization must be handled even if the map stays
+    -- closed until combat. LibStub upgrades replace functions on the same table.
+    map:Hide()
+    local late
+    library.Buttons=nil
+    library.Add=function(self)
+        late=Widget(scroll); late.name='Krowi_WorldMapButtons4'; late:SetSize(36,36)
+        late:SetPoint('TOPRIGHT',scroll,'TOPRIGHT',-100,-2)
+        self.Buttons={questie,hidden,native,late}
+        return late
+    end
+    library.SetPoints=function()
+        for _,button in ipairs(library.Buttons or {}) do
+            button:ClearAllPoints(); button:SetPoint('TOPRIGHT',scroll,'TOPRIGHT',-100,-2)
+        end
+    end
+    Event('PLAYER_LOGIN')
+    assert(library:Add()==late,'observing button creation must preserve its return value')
+    assert(late:GetParent()==Maps.customFrame.buttons,'late buttons must dock before the map is opened')
+    local hooked=library.SetPoints
+    Maps:DiscoverFrameWidgets(); assert(library.SetPoints==hooked,'do not install the same hook repeatedly')
+    combat=true; map:Show(); library.SetPoints()
+    assert(late.points[1][2]==Maps.customFrame.buttons and questie.points[1][2]==Maps.customFrame.buttons,
+        'replacement library relayout must preserve all docked buttons on first combat opening')
+    combat=false
     Maps:UpdateFrameCoordinates(); assert(Maps.customFrame.coordinates:GetText():find('42.0, 61.0',1,true))
     local protected=Widget(map); protected.protected=true
     assert(not Maps:RegisterFrameWidget('protected',protected,'buttons'))

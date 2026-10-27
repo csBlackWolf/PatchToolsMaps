@@ -1,6 +1,6 @@
 local addon, Maps = ...
 local events=CreateFrame("Frame")
-for _,event in ipairs({"ADDON_LOADED","PLAYER_REGEN_ENABLED","PLAYER_REGEN_DISABLED","MAP_EXPLORATION_UPDATED","DISPLAY_SIZE_CHANGED","CVAR_UPDATE"}) do
+for _,event in ipairs({"ADDON_LOADED","PLAYER_LOGIN","PLAYER_REGEN_ENABLED","PLAYER_REGEN_DISABLED","MAP_EXPLORATION_UPDATED","DISPLAY_SIZE_CHANGED","CVAR_UPDATE"}) do
     events:RegisterEvent(event)
 end
 function Maps:Refresh(rebuildZoom)
@@ -115,7 +115,7 @@ events:SetScript("OnEvent",function(_,event,name)
                 Maps:FinishResize()
                 Maps.moveDriver:SetScript("OnUpdate",nil); Maps.moving=nil; Maps.extraZoomScale=nil
             end
-        elseif event=="ADDON_LOADED" then
+        elseif event=="ADDON_LOADED" or event=="PLAYER_LOGIN" then
             Maps:Attach()
             if Maps.customFrame and not (InCombatLockdown and InCombatLockdown()) then
                 Maps:DiscoverFrameWidgets(); Maps:LayoutCustomFrame()

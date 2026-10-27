@@ -1,3 +1,8 @@
+# PatchToolsMaps 0.3.0-alpha.18 — 2026-10-27
+
+- Add `/ptmaps debug` to open the shared diagnostic report with game details and addon versions/load states. Requires PatchTools 0.9.0-alpha.15 or newer.
+- Retain the tested combat map interactions, modern frame and addon integrations.
+
 # PatchToolsMaps 0.3.0-alpha.17 — 2026-10-27
 
 Public alpha test: bugs are possible. The stable release remains available.

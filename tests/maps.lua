@@ -574,6 +574,12 @@ scroll.overview=nil; scroll.zoomLevels=levels
 assert(scroll:IsMouseWheelEnabled() and Maps.zoomDiagnostics.calls>0)
 SlashCmdList.PATCHTOOLSMAPS('status')
 assert(PT.lastMessage:find('Wheel events=',1,true))
+local debugCalls=0
+PT.OpenDebugReport=function() debugCalls=debugCalls+1 end
+SlashCmdList.PATCHTOOLSMAPS(' debug '); assert(debugCalls==1)
+PT.OpenDebugReport=nil; SlashCmdList.PATCHTOOLSMAPS('debug')
+assert(PT.lastMessage:find('PatchTools',1,true))
+
 print('PASS: XML-bound hardware wheel events drive zone, world and continent zoom; one-level native tables stay untouched.')
 print('PASS: extra wheel zoom without native zoom table mutation, native Era title reuse, unlimited resizing/off-screen dragging and slash reset with combat deferral.')
 if era then

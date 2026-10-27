@@ -98,7 +98,10 @@ function Maps:Initialize()
         SLASH_PATCHTOOLSMAPS1="/ptmaps"
         SLASH_PATCHTOOLSMAPS2="/patchtoolsmaps"
         SlashCmdList.PATCHTOOLSMAPS=function(message)
-            if (message or ""):lower():match("^%s*status%s*$") then
+            if (message or ""):lower():match("^%s*debug%s*$") then
+                if PT.OpenDebugReport then PT:OpenDebugReport()
+                else PT:Print(PT.locale=="deDE" and "Für den Diagnosebericht bitte PatchTools aktualisieren." or "Update PatchTools to use the diagnostic report.") end
+            elseif (message or ""):lower():match("^%s*status%s*$") then
                 self:PrintZoomStatus()
             elseif (message or ""):lower():match("^%s*reset%s*$") then
                 self:ResetMap()

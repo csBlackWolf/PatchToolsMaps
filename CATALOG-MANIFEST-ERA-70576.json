@@ -1,0 +1,39 @@
+{
+  "build": 70576,
+  "client": {
+    "version": "1.15.9.70576",
+    "product": "wow_classic_era",
+    "buildConfig": "5604ce35a8644bdcf0e26c1daf979c15",
+    "cdnConfig": "212ef6f99fdd1fdc06fbb182e49c3233",
+    "locale": "deDE",
+    "localOnly": true
+  },
+  "source": "Installed Blizzard client DB2 tables; DBCD JSON exports",
+  "map_art_count": 41,
+  "overlay_count": 525,
+  "skipped": {
+    "invalid_texture_geometry": 1
+  },
+  "flags_policy": "Accept 0 and 4 observed in this build; reject other flags and player conditions. In-game verification pending.",
+  "verified_texture_count": 808,
+  "texture_size_overrides": 42,
+  "texture_headers_sha256": "aca9bb58bc47280800fab956672bd514bcec012f8dc3092bde83563dfe48e6d7",
+  "sha256": {
+    "WorldMapOverlay.db2": "a67e514387e4a406f3785dbf1a92bb5292574eb69f6f45dc78a5225915b27752",
+    "WorldMapOverlay.json": "245d1929a7b122db118a59ead30e8bf1fa43e054e4f60efdd91ad37501f07250",
+    "definitions/WorldMapOverlay.dbd": "4fb4e500c42122eef5dde122091800a6b329f634d308ae7f92e1bdbde41cb694",
+    "WorldMapOverlayTile.db2": "6e8493c698baad54c4cda24af6bf693aa019334cb64140910f47c6a8e280cca9",
+    "WorldMapOverlayTile.json": "df131dfe7ebb7f5c7e8aad3c5197824e1246da0045e3bcf35b65eafc59f8a814",
+    "definitions/WorldMapOverlayTile.dbd": "e91c52f4deea9ab664c971a72bc5f7fee51a8061e7c99de19cf3fde6692049e6",
+    "UiMapArt.db2": "2ecee55d2ac45478c9e78946e7b3744c09609dd560b1c7323a71178aac14eec2",
+    "UiMapArt.json": "a6ad6e7d5d3de4bd2d9d9b85ca4a08e3e3a52a8120e0c3b9f5bc2c02df924125",
+    "definitions/UiMapArt.dbd": "7b43af2b7505c6f556a184b2558b80f2b9a20225cb2ade48f52089d6f27a73ef",
+    "UiMapArtStyleLayer.db2": "9aed8553ff75000dbb422cc8a942e2f4479ae9150750d2e517c581cbfa1cd21b",
+    "UiMapArtStyleLayer.json": "101fdf070fd231c5eee9baffbae630a299c900cface04d22f1e7dfeab416743a",
+    "definitions/UiMapArtStyleLayer.dbd": "3a517ed97e15d9241d0b96aaa2cf5fb274358d21ddc9618c8f811684645d6a7c",
+    "UiMapXMapArt.db2": "0a420523eaffc8bf52d543b3b5f2a72131852cd8bc5a8a9ed5bbec099eb01c66",
+    "UiMapXMapArt.json": "632f1db28a6d76a0397ea4309d077494453993342207b86273a98519afab4296",
+    "definitions/UiMapXMapArt.dbd": "1e191995d50b0d67788dd3eeee7f0404e0a53eafd356c84163263edc2a60e9b9"
+  },
+  "catalog_sha256": "b1c640c1cd420b55fe8098dd3a8ad3f5ea2c1d9aca38f219ccdd77a004235c61"
+}

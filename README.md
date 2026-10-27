@@ -18,6 +18,7 @@ _Your world map, with more freedom. The map module for PatchTools, for Classic E
 
 | Command | What it does |
 | --- | --- |
+| `/ptmaps debug` | Open a copyable diagnostic report with addon versions and load states. |
 | `/ptmaps` | Open the Map settings in PatchTools. |
 | `/ptmaps reset` | Reset the map position, size and zoom. |
 | `/ptmaps status` | Show information useful for a bug report. |
@@ -50,6 +51,7 @@ _Deine Weltkarte mit mehr Freiheiten. Das Kartenmodul für PatchTools, für Clas
 
 | Befehl | Funktion |
 | --- | --- |
+| `/ptmaps debug` | Kopierbaren Diagnosebericht mit Addon-Versionen und Ladestatus öffnen. |
 | `/ptmaps` | Die Karteneinstellungen in PatchTools öffnen. |
 | `/ptmaps reset` | Position, Größe und Zoom der Karte zurücksetzen. |
 | `/ptmaps status` | Hilfreiche Informationen für einen Fehlerbericht anzeigen. |

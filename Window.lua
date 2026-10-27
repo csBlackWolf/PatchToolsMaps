@@ -1,6 +1,6 @@
 local _, Maps = ...
 function Maps:CanChangeWindow()
-    return self.map and not (InCombatLockdown and InCombatLockdown())
+    return self.map and self:CanUseMapInCombat()
         and not (self.map.IsMaximized and self.map:IsMaximized())
 end
 function Maps:SavePosition()
@@ -8,16 +8,17 @@ function Maps:SavePosition()
     local left,top=map:GetLeft(),map:GetTop()
     if not left or not top then return end
     local ratio=map:GetEffectiveScale()/UIParent:GetEffectiveScale()
-    self.db.x=left*ratio/UIParent:GetWidth()
-    self.db.y=top*ratio/UIParent:GetHeight()
+    self.windowDB.x=left*ratio/UIParent:GetWidth()
+    self.windowDB.y=top*ratio/UIParent:GetHeight()
 end
 function Maps:ApplyEraChrome(factor,maximized)
     if not self.eraChrome then return false end
     -- Era's small border is two fixed-size textures, not a stretchable frame.
     -- Scale only the decorative header/border and its controls. The map canvas
     -- remains in the native coordinate space used by continent hit testing.
+    local custom=self.customFrame and self:UseCustomFrame()
     for _,entry in ipairs(self.eraChrome) do
-        local scale=entry.scale*factor
+        local scale=entry.scale*(custom and 1 or factor)
         if math.abs(entry.frame:GetScale()-scale)>.00001 then entry.frame:SetScale(scale) end
     end
     local scroll=self.map.ScrollContainer
@@ -25,6 +26,7 @@ function Maps:ApplyEraChrome(factor,maximized)
     local inset=self.eraInsets
     local left,top=inset[1]*factor,inset[2]*factor
     local right,bottom=inset[3]*factor,inset[4]*factor
+    if custom then left,top,right,bottom=self:GetCustomFrameInsets() end
     if maximized then left,top,right,bottom=11,-70,inset[3],inset[4] end
     local matched=0
     for i=1,scroll:GetNumPoints() do
@@ -59,14 +61,12 @@ function Maps:RefreshEraViewport(view)
         and scroll and type(scroll.CreateZoomLevels)=="function" then
         -- Only recompute the viewport's fit scales during the gesture. A full
         -- frame rebuild resets the canvas and refreshes providers on every tick.
-        if securecallfunction then securecallfunction(scroll.CreateZoomLevels,scroll)
-        else scroll:CreateZoomLevels() end
+        self:CallMapFunction(scroll.CreateZoomLevels,scroll)
         -- Finishing the drag runs the normal reveal hook once, without the
         -- native ResetZoom that would blend the saved pan back toward center.
         self.viewportRebuildPending=self.resizing and true or nil
     elseif type(map.OnFrameSizeChanged)=="function" then
-        if securecallfunction then securecallfunction(map.OnFrameSizeChanged,map)
-        else map:OnFrameSizeChanged() end
+        self:CallMapFunction(map.OnFrameSizeChanged,map)
         self.viewportRebuildPending=nil
     end
     self.extraZoomScale=nil
@@ -90,19 +90,12 @@ function Maps:RefreshEraViewport(view)
                 if xmin>xmax then x=.5 end
                 if ymin>ymax then y=.5 end
                 local currentX,currentY=scroll:GetCurrentScrollX(),scroll:GetCurrentScrollY()
-                if securecallfunction then
-                    securecallfunction(scroll.SetPanTarget,scroll,currentX,currentY)
-                    securecallfunction(scroll.MarkCanvasDirty,scroll)
-                    securecallfunction(scroll.SetPanTarget,scroll,x,y)
-                else
-                    scroll:SetPanTarget(currentX,currentY)
-                    scroll:MarkCanvasDirty()
-                    scroll:SetPanTarget(x,y)
-                end
+                self:CallMapFunction(scroll.SetPanTarget,scroll,currentX,currentY)
+                self:CallMapFunction(scroll.MarkCanvasDirty,scroll)
+                self:CallMapFunction(scroll.SetPanTarget,scroll,x,y)
             end
         end
-        if securecallfunction then securecallfunction(scroll.InstantPanAndZoom,scroll,target,x,y)
-        else scroll:InstantPanAndZoom(target,x,y) end
+        self:CallMapFunction(scroll.InstantPanAndZoom,scroll,target,x,y)
         if self.db.extendedZoom and target>levels[1].scale+.000001 then self.extraZoomScale=target end
     end
 end
@@ -115,6 +108,7 @@ function Maps:FinishResize()
 end
 function Maps:ApplyWindow()
     if not self:CanChangeWindow() then return end
+    if self.customFrame then self:UpdateNovaTimers() end
     local map=self.map
     -- Capture before changing the viewport: native normalized scroll getters
     -- depend on its dimensions. Keep one stable snapshot for the entire drag.
@@ -124,28 +118,58 @@ function Maps:ApplyWindow()
         -- Era's native cursor conversion assumes the window's original scale.
         -- Change the viewport dimensions instead of scaling its coordinate space.
         map:SetScale(self.originalScale)
-        local width,height=self.originalWidth*self.db.scale,self.originalHeight*self.db.scale
+        local width,height=self.originalWidth*self.windowDB.scale,self.originalHeight*self.windowDB.scale
+        if self.customFrame and self:UseCustomFrame() then height=self:GetCustomFrameHeight(width) end
         resized=math.abs(map:GetWidth()-width)>.01 or math.abs(map:GetHeight()-height)>.01
         if resized then map:SetSize(width,height) end
-        resized=self:ApplyEraChrome(self.db.scale,false) or resized
+        resized=self:ApplyEraChrome(self.windowDB.scale,false) or resized
     else
-        map:SetScale(self.originalScale*self.db.scale)
+        map:SetScale(self.originalScale*self.windowDB.scale)
     end
-    if self.db.x and self.db.y then
+    if self.windowDB.x and self.windowDB.y then
         local ratio=UIParent:GetEffectiveScale()/map:GetEffectiveScale()
         map:ClearAllPoints()
-        map:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",self.db.x*UIParent:GetWidth()*ratio,self.db.y*UIParent:GetHeight()*ratio)
+        map:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",self.windowDB.x*UIParent:GetWidth()*ratio,self.windowDB.y*UIParent:GetHeight()*ratio)
     end
     map:SetClampedToScreen(false)
     if self.ownsDragBar then self.dragBar:SetShown(self.db.movable) end
     self.resizeGrip:SetShown(self.db.resizable)
+    if self.customFrame then self:LayoutCustomFrame() end
     if self.eraChrome and (resized or (self.viewportRebuildPending and not self.resizing)) then
         self:RefreshEraViewport(view)
     end
+    if self.customFrame and self:UseCustomFrame() then
+        local points={}
+        for i=1,map:GetNumPoints() do points[i]={map:GetPoint(i)} end
+        self.combatWindow={width=map:GetWidth(),height=map:GetHeight(),scale=map:GetScale(),points=points}
+    else self.combatWindow=nil end
+end
+
+function Maps:RestoreCombatWindow()
+    local map,layout=self.map,self.combatWindow
+    if not map or not layout or not self:UseCustomFrame() or map:IsProtected() then return end
+    -- Restore only the layout prepared before combat. Moving/resizing by the
+    -- player remains deferred, and another addon's protected children win.
+    local resized=map:GetWidth()~=layout.width or map:GetHeight()~=layout.height
+    if map:GetScale()~=layout.scale then map:SetScale(layout.scale) end
+    if resized then map:SetSize(layout.width,layout.height) end
+    local changed=map:GetNumPoints()~=#layout.points
+    for i,point in ipairs(layout.points) do
+        local current={map:GetPoint(i)}
+        for j=1,5 do if current[j]~=point[j] then changed=true; break end end
+    end
+    if changed then
+        map:ClearAllPoints()
+        for _,point in ipairs(layout.points) do map:SetPoint(unpack(point)) end
+    end
+    self:RestoreCombatFrame()
+    if resized and not map.ScrollContainer:IsProtected() and type(map.OnFrameSizeChanged)=="function" then
+        map:OnFrameSizeChanged()
+    end
 end
 function Maps:ResetWindow()
-    self.db.scale,self.db.x,self.db.y=1,nil,nil
-    if not self:CanChangeWindow() then self.resetPending=true; return end
+    self.windowDB.scale,self.windowDB.x,self.windowDB.y=1,nil,nil
+    if not self:CanChangeWindow() or (InCombatLockdown and InCombatLockdown()) then self.resetPending=true; return end
     self.resetPending=nil
     local map=self.map
     map:SetScale(self.originalScale)
@@ -220,15 +244,15 @@ function Maps:InstallWindow(map)
         if map.StopMovingOrSizing then map:StopMovingOrSizing() end
         self:SavePosition()
         local x,y=GetCursorPosition()
-        local startX,startY=self.db.x,self.db.y
+        local startX,startY=self.windowDB.x,self.windowDB.y
         if not startX or not startY then return end
         self.moving=true
         driver:SetScript("OnUpdate",function()
             if not self:CanChangeWindow() then driver:SetScript("OnUpdate",nil); self.moving=nil; return end
             local cx,cy=GetCursorPosition()
             local scale=UIParent:GetEffectiveScale()
-            self.db.x=startX+(cx-x)/scale/UIParent:GetWidth()
-            self.db.y=startY+(cy-y)/scale/UIParent:GetHeight()
+            self.windowDB.x=startX+(cx-x)/scale/UIParent:GetWidth()
+            self.windowDB.y=startY+(cy-y)/scale/UIParent:GetHeight()
             self:ApplyWindow()
         end)
     end
@@ -240,6 +264,10 @@ function Maps:InstallWindow(map)
         self:ApplyWindow()
     end
     bar:HookScript("OnDragStop",Stop)
+    if self.customHeader then
+        self.customHeader:HookScript("OnDragStart",Start)
+        self.customHeader:HookScript("OnDragStop",Stop)
+    end
     local grip=CreateFrame("Button",nil,map)
     self.resizeGrip=grip
     grip:Hide()
@@ -259,7 +287,7 @@ function Maps:InstallWindow(map)
         self.resizing=true
         if GameTooltip then GameTooltip:Hide() end
         local x,y=GetCursorPosition()
-        local start=self.db.scale
+        local start=self.windowDB.scale
         local width=map:GetWidth()*map:GetEffectiveScale()
         local height=map:GetHeight()*map:GetEffectiveScale()
         grip:SetScript("OnUpdate",function()
@@ -269,7 +297,7 @@ function Maps:InstallWindow(map)
             if not self:CanChangeWindow() then self:FinishResize(); return end
             local cx,cy=GetCursorPosition()
             local delta=((cx-x)*width+(y-cy)*height)/(width*width+height*height)
-            self.db.scale=math.max(.6,start*(1+delta))
+            self.windowDB.scale=math.max(.6,start*(1+delta))
             self:ApplyWindow()
         end)
     end)
@@ -292,6 +320,8 @@ function Maps:InstallWindow(map)
                         else map:OnFrameSizeChanged() end
                         self.viewportRebuildPending=nil
                     end
+                    if self.customFrame then self:LayoutCustomFrame() end
+                    self:ApplyMapOpacity()
                 end
             else self:Refresh() end
         end) end

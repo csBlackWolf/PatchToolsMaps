@@ -1,5 +1,24 @@
 local _, Maps = ...
 
+function Maps:CanUseMapInCombat()
+    if not (InCombatLockdown and InCombatLockdown()) then return true end
+    if not (PatchTools and PatchTools.isClassicEra) or not self.map then return false end
+    -- Switching the whole frame style still waits until combat ends.
+    if self.customFrame and (self.customControlsPlaced==true)~=(self:UseCustomFrame()==true) then return false end
+    for _,frame in ipairs({self.map,self.map.ScrollContainer,self.map:GetCanvas()}) do
+        if frame.IsProtected and frame:IsProtected() then return false end
+    end
+    return true
+end
+
+function Maps:CallMapFunction(fn,...)
+    -- securecallfunction does not grant combat permission. Call ordinary map
+    -- operations directly only after checking the actual frame protection.
+    if InCombatLockdown and InCombatLockdown() then return fn(...) end
+    if securecallfunction then return securecallfunction(fn,...) end
+    return fn(...)
+end
+
 function Maps:InstallZoom(scroll)
     if not scroll or type(scroll.OnMouseWheel) ~= "function"
         or type(scroll.InstantPanAndZoom) ~= "function" then return end
@@ -18,7 +37,7 @@ function Maps:InstallZoom(scroll)
         diagnostic.calls=diagnostic.calls+1
         diagnostic.delta=delta
         if not self.db.extendedZoom then diagnostic.reason="disabled"; return end
-        if InCombatLockdown and InCombatLockdown() then diagnostic.reason="combat"; return end
+        if not self:CanUseMapInCombat() then diagnostic.reason="combat-protected"; return end
         if type(delta)~="number" or delta==0 then diagnostic.reason="invalid-delta"; return end
         if type(scroll.zoomLevels)~="table" or #scroll.zoomLevels==0 then diagnostic.reason="no-levels"; return end
         local maximum = scroll:GetScaleForMaxZoom()
@@ -52,8 +71,7 @@ function Maps:InstallZoom(scroll)
         end
         diagnostic.reason,diagnostic.target="applied",target
         self.extraZoomScale = target > minimum + .000001 and target or nil
-        if securecallfunction then securecallfunction(scroll.InstantPanAndZoom, scroll, target, x, y)
-        else scroll:InstantPanAndZoom(target, x, y) end
+        self:CallMapFunction(scroll.InstantPanAndZoom, scroll, target, x, y)
         diagnostic.after=scroll:GetCanvasScale()
     end)
 end

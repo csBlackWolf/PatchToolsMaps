@@ -1,18 +1,22 @@
 local addon, Maps = ...
 local events=CreateFrame("Frame")
-for _,event in ipairs({"ADDON_LOADED","PLAYER_REGEN_ENABLED","PLAYER_REGEN_DISABLED","MAP_EXPLORATION_UPDATED","DISPLAY_SIZE_CHANGED"}) do
+for _,event in ipairs({"ADDON_LOADED","PLAYER_LOGIN","PLAYER_REGEN_ENABLED","PLAYER_REGEN_DISABLED","MAP_EXPLORATION_UPDATED","DISPLAY_SIZE_CHANGED","CVAR_UPDATE"}) do
     events:RegisterEvent(event)
 end
 function Maps:Refresh(rebuildZoom)
     if rebuildZoom then self.zoomPending=true end
     if not self.map then self:Attach(); return end
+    if self.customFrame and not (InCombatLockdown and InCombatLockdown()) then self:DiscoverFrameWidgets() end
+    if InCombatLockdown and InCombatLockdown() then self:RestoreCombatWindow() end
     if self.resetPending then self:ResetWindow() else self:ApplyWindow() end
+    if InCombatLockdown and InCombatLockdown() then self:RestoreCombatWindow(); self:RestoreCombatFrame() end
+    self:ApplyMapOpacity()
     if self.zoomPending and not (InCombatLockdown and InCombatLockdown()) and self.map:IsShown()
         and self.map.ScrollContainer and type(self.map.ScrollContainer.zoomLevels)=="table"
         and #self.map.ScrollContainer.zoomLevels>0 then
         self.zoomPending=nil
     end
-    if self.resetViewPending and not self.zoomPending and self:CanChangeWindow() and self.map:IsShown()
+    if self.resetViewPending and not self.zoomPending and not (InCombatLockdown and InCombatLockdown()) and self:CanChangeWindow() and self.map:IsShown()
         and self:GetReadyLayerIndex() then
         local scroll=self.map.ScrollContainer
         if scroll and type(scroll.ResetZoom)=="function" then
@@ -35,10 +39,18 @@ end
 function Maps:Attach()
     if self.map or (InCombatLockdown and InCombatLockdown()) or not WorldMapFrame or not WorldMapFrame.GetCanvas then return end
     self.map=WorldMapFrame
+    self:InstallCustomFrame(self.map)
     self:InstallWindow(self.map)
     local function Reveal() self.extraZoomScale=nil; self:RefreshReveal() end
     for _,method in ipairs({"OnMapChanged","OnCanvasSizeChanged"}) do
         if type(self.map[method])=="function" then hooksecurefunc(self.map,method,Reveal) end
+    end
+    if self.customFrame and type(self.map.OnMapChanged)=="function" then
+        hooksecurefunc(self.map,"OnMapChanged",function()
+            C_Timer.After(0,function()
+                if self:UseCustomFrame() and self.map:IsShown() then self:Refresh() end
+            end)
+        end)
     end
     if type(self.map.RefreshMaskableTextures)=="function" then
         hooksecurefunc(self.map,"RefreshMaskableTextures",function() self:UpdateRevealMasks() end)
@@ -60,17 +72,23 @@ function Maps:Initialize()
     end
     if type(PatchToolsMapsDB)~="table" then PatchToolsMapsDB={} end
     self.db=PatchToolsMapsDB
-    for key,value in pairs({movable=true,resizable=true,extendedZoom=true,scale=1,mode="mist"}) do
+    if type(PatchToolsMapsCharacterDB)~="table" then
+        PatchToolsMapsCharacterDB={scale=self.db.scale,x=self.db.x,y=self.db.y}
+    end
+    self.windowDB=PatchToolsMapsCharacterDB
+    if type(self.windowDB.scale)~="number" then self.windowDB.scale=1 end
+    for key,value in pairs({movable=true,resizable=true,extendedZoom=true,mode="mist"}) do
         if type(self.db[key])~=type(value) then self.db[key]=value end
     end
+    if type(self.db.customFrame)~="boolean" then self.db.customFrame=PT.isClassicEra==true end
     if self.db.mode~="classic" and self.db.mode~="mist" and self.db.mode~="full" then self.db.mode="mist" end
-    local scale=self.db.scale
-    self.db.scale=scale==scale and scale<math.huge and math.max(.6,scale) or 1
+    local scale=self.windowDB.scale
+    self.windowDB.scale=scale==scale and scale<math.huge and math.max(.6,scale) or 1
     for _,key in ipairs({"x","y"}) do
-        local value=self.db[key]
-        if type(value)~="number" or value~=value or math.abs(value)==math.huge then self.db[key]=nil end
+        local value=self.windowDB[key]
+        if type(value)~="number" or value~=value or math.abs(value)==math.huge then self.windowDB[key]=nil end
     end
-    if not self.db.x or not self.db.y then self.db.x,self.db.y=nil,nil end
+    if not self.windowDB.x or not self.windowDB.y then self.windowDB.x,self.windowDB.y=nil,nil end
     if type(self.db.knownOverlays)~="table" then self.db.knownOverlays={} end
     for key,value in pairs(self.db.knownOverlays) do
         if type(value)~="table" then self.db.knownOverlays[key]=nil end
@@ -80,7 +98,10 @@ function Maps:Initialize()
         SLASH_PATCHTOOLSMAPS1="/ptmaps"
         SLASH_PATCHTOOLSMAPS2="/patchtoolsmaps"
         SlashCmdList.PATCHTOOLSMAPS=function(message)
-            if (message or ""):lower():match("^%s*status%s*$") then
+            if (message or ""):lower():match("^%s*debug%s*$") then
+                if PT.OpenDebugReport then PT:OpenDebugReport()
+                else PT:Print(PT.locale=="deDE" and "Für den Diagnosebericht bitte PatchTools aktualisieren." or "Update PatchTools to use the diagnostic report.") end
+            elseif (message or ""):lower():match("^%s*status%s*$") then
                 self:PrintZoomStatus()
             elseif (message or ""):lower():match("^%s*reset%s*$") then
                 self:ResetMap()
@@ -94,11 +115,20 @@ events:SetScript("OnEvent",function(_,event,name)
     if event=="ADDON_LOADED" and name==addon then Maps:Initialize()
     elseif Maps.initialized then
         if event=="PLAYER_REGEN_DISABLED" then
-            if Maps.resizeGrip then
+            if Maps.resizeGrip and not Maps:CanChangeWindow() then
                 Maps:FinishResize()
                 Maps.moveDriver:SetScript("OnUpdate",nil); Maps.moving=nil; Maps.extraZoomScale=nil
             end
-        elseif event=="ADDON_LOADED" then Maps:Attach()
+        elseif event=="ADDON_LOADED" or event=="PLAYER_LOGIN" then
+            Maps:Attach()
+            if Maps.customFrame and not (InCombatLockdown and InCombatLockdown()) then
+                Maps:DiscoverFrameWidgets(); Maps:LayoutCustomFrame()
+                if event=="PLAYER_LOGIN" then Maps:ApplyWindow() end
+            end
+        elseif event=="CVAR_UPDATE" then
+            if type(name)=="string" and name:lower():gsub("_","")=="worldmapopacity" then
+                Maps:ApplyMapOpacity(); Maps:UpdateOptions(); Maps:UpdateOpacityPopup()
+            end
         elseif event=="PLAYER_REGEN_ENABLED" or event=="DISPLAY_SIZE_CHANGED" then Maps:Refresh()
         elseif event=="MAP_EXPLORATION_UPDATED" then Maps:RefreshReveal() end
     end

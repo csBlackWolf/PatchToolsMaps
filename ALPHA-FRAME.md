@@ -19,7 +19,7 @@ The dark frame has a single compact title/button header and a one-line coordinat
 - TomTom: leave waypoint and click handling intact. The footer provides player/cursor coordinates itself; it does not overwrite TomTom settings or fonts.
 - Fixed widgets from other addons may use the API below. Unknown widgets are not automatically grabbed from the map.
 
-Out-of-combat layout changes only. Maximizing the map or disabling the custom frame restores adopted widgets to their saved parents and anchors. Protected widgets are rejected. No external addon files or settings are edited.
+Unprotected Classic Era maps support window gestures and zoom in combat; protected maps and frame-style changes wait until combat ends. Maximizing the map or disabling the custom frame restores adopted widgets to their saved parents and anchors. Protected widgets are rejected. No external addon files or settings are edited.
 
 See [the developer integration guide](INTEGRATION.md) for complete examples and compatibility rules.
 

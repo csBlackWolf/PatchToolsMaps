@@ -1,6 +1,6 @@
 local _, Maps = ...
 _G.PatchToolsMaps = Maps
-Maps.version = "0.3.0-alpha.16"
+Maps.version = "0.3.0-alpha.17-local.1"
 local en = {
     QUICK_TRANSPARENCY="Transparency: %d%%",
     OPACITY_SHORTCUT="Right-click the area name to adjust map transparency.",
@@ -14,13 +14,13 @@ local en = {
     MOVABLE="Move the map window", RESIZE="Resize with the bottom-right corner handle",
     WINDOW_HINT="Drag the existing title bar; resize at the corner. No size cap or screen-edge limit. Reset: /ptmaps reset.",
     SIZE_DRAG="Drag to resize the map window",
-    ZOOM="Extended map zoom", ZOOM_HINT="Mouse wheel: up to 4× beyond native maximum outside combat. Reset: /ptmaps reset.",
+    ZOOM="Extended map zoom", ZOOM_HINT="Mouse wheel: up to 4× beyond native maximum. Classic Era: also in combat if the map is unprotected. Reset: /ptmaps reset.",
     MODE="Unexplored areas", CLASSIC="Classic", MIST="Semi-transparent fog (default)", FULL="Fully revealed",
     VISUAL="Visual only: exploration, XP and achievements are unchanged.", RESET="Reset map position, size and zoom",
     STATUS="Client build: %s. Maps without matching data keep their original display.",
     DRAG="PatchToolsMaps · drag here", SCALE="Window scale: %d%%", API="PatchToolsMaps needs PatchTools 0.7.0 or newer.",
     RESET_DONE="Map position, size and zoom reset.", RESET_PENDING="Map reset will finish after combat.",
-    COMBAT="Map window changes are deferred until combat ends.",
+    COMBAT="Protected map window changes wait until combat ends.",
 }
 local de = {
     QUICK_TRANSPARENCY="Transparenz: %d%%",
@@ -35,13 +35,13 @@ local de = {
     MOVABLE="Kartenfenster frei verschieben", RESIZE="Größe am Eckgriff unten rechts ändern",
     WINDOW_HINT="Vorhandene Titelleiste ziehen; an der Ecke vergrößern. Ohne Größen- und Bildschirmgrenze. Reset: /ptmaps reset.",
     SIZE_DRAG="Ziehen, um die Kartengröße zu ändern",
-    ZOOM="Erweiterter Kartenzoom", ZOOM_HINT="Mausrad: außerhalb des Kampfes bis 4× über das normale Maximum. Zurücksetzen: /ptmaps reset.",
+    ZOOM="Erweiterter Kartenzoom", ZOOM_HINT="Mausrad: bis 4× über das normale Maximum. Classic Era: auch im Kampf, wenn die Karte ungeschützt ist. Reset: /ptmaps reset.",
     MODE="Unentdeckte Gebiete", CLASSIC="Klassisch", MIST="Halbtransparenter Nebel (Standard)", FULL="Voll aufgedeckt",
     VISUAL="Nur die Darstellung: Erkundung, EP und Erfolge bleiben unverändert.", RESET="Position, Größe und Zoom zurücksetzen",
     STATUS="Client-Build: %s. Karten ohne passende Daten behalten ihre normale Anzeige.",
     DRAG="PatchToolsMaps · hier ziehen", SCALE="Fenstergröße: %d%%", API="PatchToolsMaps benötigt PatchTools 0.7.0 oder neuer.",
     RESET_DONE="Kartenposition, Größe und Zoom zurückgesetzt.", RESET_PENDING="Karte wird nach dem Kampf zurückgesetzt.",
-    COMBAT="Änderungen am Kartenfenster werden bis zum Kampfende aufgeschoben.",
+    COMBAT="Bei geschütztem Kartenfenster werden Änderungen bis zum Kampfende aufgeschoben.",
 }
 Maps.language = GetLocale() == "deDE" and de or en
 function Maps:T(key, ...)

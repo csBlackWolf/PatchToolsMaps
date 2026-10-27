@@ -329,7 +329,7 @@ end
 
 function Maps:LayoutCustomFrame()
     if not self.customFrame or self.layingOutFrame then return end
-    if InCombatLockdown and InCombatLockdown() then self:RestoreCombatFrame(); return end
+    if not self:CanUseMapInCombat() then self:RestoreCombatFrame(); return end
     self.layingOutFrame=true
     local enabled=self:UseCustomFrame()
     if not enabled and self.opacityPopup then self.opacityPopup:Hide() end

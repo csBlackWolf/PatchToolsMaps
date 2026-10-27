@@ -1,6 +1,6 @@
 local _, Maps = ...
 function Maps:CanChangeWindow()
-    return self.map and not (InCombatLockdown and InCombatLockdown())
+    return self.map and self:CanUseMapInCombat()
         and not (self.map.IsMaximized and self.map:IsMaximized())
 end
 function Maps:SavePosition()
@@ -61,14 +61,12 @@ function Maps:RefreshEraViewport(view)
         and scroll and type(scroll.CreateZoomLevels)=="function" then
         -- Only recompute the viewport's fit scales during the gesture. A full
         -- frame rebuild resets the canvas and refreshes providers on every tick.
-        if securecallfunction then securecallfunction(scroll.CreateZoomLevels,scroll)
-        else scroll:CreateZoomLevels() end
+        self:CallMapFunction(scroll.CreateZoomLevels,scroll)
         -- Finishing the drag runs the normal reveal hook once, without the
         -- native ResetZoom that would blend the saved pan back toward center.
         self.viewportRebuildPending=self.resizing and true or nil
     elseif type(map.OnFrameSizeChanged)=="function" then
-        if securecallfunction then securecallfunction(map.OnFrameSizeChanged,map)
-        else map:OnFrameSizeChanged() end
+        self:CallMapFunction(map.OnFrameSizeChanged,map)
         self.viewportRebuildPending=nil
     end
     self.extraZoomScale=nil
@@ -92,19 +90,12 @@ function Maps:RefreshEraViewport(view)
                 if xmin>xmax then x=.5 end
                 if ymin>ymax then y=.5 end
                 local currentX,currentY=scroll:GetCurrentScrollX(),scroll:GetCurrentScrollY()
-                if securecallfunction then
-                    securecallfunction(scroll.SetPanTarget,scroll,currentX,currentY)
-                    securecallfunction(scroll.MarkCanvasDirty,scroll)
-                    securecallfunction(scroll.SetPanTarget,scroll,x,y)
-                else
-                    scroll:SetPanTarget(currentX,currentY)
-                    scroll:MarkCanvasDirty()
-                    scroll:SetPanTarget(x,y)
-                end
+                self:CallMapFunction(scroll.SetPanTarget,scroll,currentX,currentY)
+                self:CallMapFunction(scroll.MarkCanvasDirty,scroll)
+                self:CallMapFunction(scroll.SetPanTarget,scroll,x,y)
             end
         end
-        if securecallfunction then securecallfunction(scroll.InstantPanAndZoom,scroll,target,x,y)
-        else scroll:InstantPanAndZoom(target,x,y) end
+        self:CallMapFunction(scroll.InstantPanAndZoom,scroll,target,x,y)
         if self.db.extendedZoom and target>levels[1].scale+.000001 then self.extraZoomScale=target end
     end
 end
@@ -178,7 +169,7 @@ function Maps:RestoreCombatWindow()
 end
 function Maps:ResetWindow()
     self.windowDB.scale,self.windowDB.x,self.windowDB.y=1,nil,nil
-    if not self:CanChangeWindow() then self.resetPending=true; return end
+    if not self:CanChangeWindow() or (InCombatLockdown and InCombatLockdown()) then self.resetPending=true; return end
     self.resetPending=nil
     local map=self.map
     map:SetScale(self.originalScale)

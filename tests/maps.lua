@@ -457,18 +457,18 @@ local function WindowFactor() return era and map:GetWidth()/Maps.originalWidth o
 Maps.windowDB.scale=1.3; Maps:Refresh(); assert(math.abs(WindowFactor()-1.3)<.00001)
 map:Maximize(); assert(map.scale==1 and not Maps.dragBar:IsShown())
 map:Minimize(); assert(math.abs(WindowFactor()-1.3)<.00001 and Maps.dragBar:IsShown())
-combat=true; Maps.windowDB.scale=.8; Maps:Refresh(); assert(math.abs(WindowFactor()-1.3)<.00001)
+map.protected=true; combat=true; Maps.windowDB.scale=.8; Maps:Refresh(); assert(math.abs(WindowFactor()-1.3)<.00001)
 Maps.db.extendedZoom=true; Maps:Refresh(true); assert(#scroll.zoomLevels==2)
-combat=false; Event('PLAYER_REGEN_ENABLED'); assert(math.abs(WindowFactor()-.8)<.00001 and #scroll.zoomLevels==2)
+map.protected=nil; combat=false; Event('PLAYER_REGEN_ENABLED'); assert(math.abs(WindowFactor()-.8)<.00001 and #scroll.zoomLevels==2)
 Maps.dragBar.scripts.OnDragStart(); assert(Maps.moving)
 Maps.dragBar.scripts.OnDragStop(); assert(not Maps.moving and Maps.windowDB.x and Maps.windowDB.y)
 Maps.dragBar.scripts.OnDragStart()
-combat=true; Event('PLAYER_REGEN_DISABLED')
+map.protected=true; combat=true; Event('PLAYER_REGEN_DISABLED')
 assert(not Maps.moving and not Maps.moveDriver.scripts.OnUpdate)
 assert(Maps.dragBar:IsShown() and Maps.resizeGrip:IsShown())
 Maps.resizeGrip.scripts.OnMouseDown(Maps.resizeGrip,'LeftButton')
 assert(Maps.resizeGrip:IsShown() and not Maps.resizeGrip.scripts.OnUpdate)
-combat=false; Event('PLAYER_REGEN_ENABLED')
+map.protected=nil; combat=false; Event('PLAYER_REGEN_ENABLED')
 Maps.resizeGrip.scripts.OnMouseDown(Maps.resizeGrip,'LeftButton')
 cursorX,cursorY=100000,-100000
 Maps.resizeGrip.scripts.OnUpdate(); assert(Maps.windowDB.scale>1.5)
@@ -491,10 +491,10 @@ assert(#scroll.zoomLevels==2 and scroll.currentScale==1 and scroll.panX==.5 and 
 assert(Maps.optionsUI.checks.extendedZoom.checked==true)
 map:Show()
 local resets=scroll.resets
-combat=true; Maps.db.extendedZoom=true; Maps.windowDB.scale=1.2
+map.protected=true; combat=true; Maps.db.extendedZoom=true; Maps.windowDB.scale=1.2
 Maps:ResetMap(); assert(scroll.resets==resets and Maps.resetViewPending and Maps.resetPending)
 assert(map:IsShown() and panelCloses==1) -- protected UI close waits for combat to end
-combat=false; Event('PLAYER_REGEN_ENABLED')
+map.protected=nil; combat=false; Event('PLAYER_REGEN_ENABLED')
 assert(scroll.resets==resets+1 and not Maps.resetViewPending and not Maps.resetPending)
 assert(not map:IsShown() and panelCloses==2)
 map:Show()
@@ -541,11 +541,11 @@ Wheel(-1); assert(scroll.currentScale==2.5)
 Wheel(-1); assert(scroll.currentScale==2 and Maps.extraZoomScale==2)
 for i=1,20 do Wheel(1) end
 assert(scroll.currentScale==8 and scroll.zoomLevels==levels and #levels==2)
-combat=true; local secureBefore=secureCalls
+map.protected=true; combat=true; local secureBefore=secureCalls
 Wheel(1); assert(secureCalls==secureBefore and scroll.currentScale==2)
 SlashCmdList.PATCHTOOLSMAPS('reset')
 assert(Maps.resetPending and map:IsShown())
-combat=false; Event('PLAYER_REGEN_ENABLED')
+map.protected=nil; combat=false; Event('PLAYER_REGEN_ENABLED')
 assert(not map:IsShown() and Maps.windowDB.scale==1 and not Maps.windowDB.x and not Maps.windowDB.y)
 map:Show(); Maps.windowDB.scale=5; Maps.windowDB.x=-2; Maps.windowDB.y=3; Maps:ApplyWindow()
 SlashCmdList.PATCHTOOLSMAPS('reset')
@@ -566,9 +566,9 @@ for _,overview in ipairs({'world','continent'}) do
     scroll.scripts.OnMouseUp(scroll,'RightButton'); assert(not Maps.extraZoomScale)
     Maps.db.extendedZoom=false; scroll.currentScale=.75
     Wheel(1); assert(scroll.currentScale==.75)
-    Maps.db.extendedZoom=true; combat=true
+    Maps.db.extendedZoom=true; map.protected=true; combat=true
     Wheel(1); assert(scroll.currentScale==.75)
-    combat=false
+    map.protected=nil; combat=false
 end
 scroll.overview=nil; scroll.zoomLevels=levels
 assert(scroll:IsMouseWheelEnabled() and Maps.zoomDiagnostics.calls>0)
@@ -613,7 +613,7 @@ Maps.initialized=true
 -- Regression: Era's native hit test reads physical cursor coordinates. Scaling
 -- the entire frame shifts continent selection; growing its dimensions must not.
 if era then
-    combat=false; map.maximized=false; map:Show()
+    map.protected=nil; combat=false; map.maximized=false; map:Show()
     local cursorMethod=scroll.GetCursorPosition
     local function NativeEraHitTest(px,py,canvasScale,left,top,width,height)
         return (px/canvasScale-left)/width,(top-py/canvasScale)/height
@@ -641,7 +641,7 @@ end
 if era then
     -- Native viewport rebuilds recreate the fit zoom. Keep relative zoom while
     -- resizing, and avoid resetting it again on ordinary settings refreshes.
-    combat=false; map.maximized=false; map:Show()
+    map.protected=nil; combat=false; map.maximized=false; map:Show()
     local rebuilds=0
     function map:OnFrameSizeChanged()
         rebuilds=rebuilds+1
@@ -655,15 +655,15 @@ if era then
     Maps.db.extendedZoom=true; Maps.windowDB.scale=2; Maps:ApplyWindow()
     assert(rebuilds==1 and scroll.currentScale==6 and Maps.extraZoomScale==6)
     Maps:ApplyWindow(); assert(rebuilds==1,'unchanged dimensions must not rebuild/reset zoom')
-    combat=true; Maps.windowDB.scale=3; Maps:ApplyWindow()
+    map.protected=true; combat=true; Maps.windowDB.scale=3; Maps:ApplyWindow()
     assert(rebuilds==1 and map:GetWidth()==2*Maps.originalWidth)
-    combat=false; Maps:Refresh()
+    map.protected=nil; combat=false; Maps:Refresh()
     assert(rebuilds==2 and scroll.currentScale==9)
     Maps:ResetMap(); assert(map:GetWidth()==Maps.originalWidth)
 end
 
 if era then
-    combat=false; map.maximized=false; map:Show()
+    map.protected=nil; combat=false; map.maximized=false; map:Show()
     for _,factor in ipairs({.6,1,1.3,2,5}) do
         Maps.windowDB.scale=factor; Maps:ApplyWindow()
         assert(map:GetScale()==Maps.originalScale,'canvas coordinate scale must stay native')
@@ -682,9 +682,9 @@ if era then
     assert(map.MiniBorderFrame:GetScale()==1 and WorldMapFrameCloseButton:GetScale()==1)
     assert(scroll.points[1][4]==11 and scroll.points[1][5]==-70 and scroll.points[2][5]==28)
     map:Minimize(); assert(map.MiniBorderFrame:GetScale()==Maps.windowDB.scale)
-    combat=true; local before=map.MiniBorderFrame:GetScale()
+    map.protected=true; combat=true; local before=map.MiniBorderFrame:GetScale()
     Maps.windowDB.scale=1.7; Maps:ApplyWindow(); assert(map.MiniBorderFrame:GetScale()==before)
-    combat=false; Maps:Refresh(); assert(map.MiniBorderFrame:GetScale()==1.7)
+    map.protected=nil; combat=false; Maps:Refresh(); assert(map.MiniBorderFrame:GetScale()==1.7)
     Maps:ResetMap(); assert(map.MiniBorderFrame:GetScale()==1 and WorldMapFrameCloseButton:GetScale()==1)
     assert(scroll.points[1][4]==20 and scroll.points[2][5]==28)
 end
@@ -693,7 +693,7 @@ if era then
     -- Resize a zoomed/panned canvas using Era's native pan interpolation and
     -- viewport-dependent scroll getters. Neither repeated resets nor focus
     -- drift may be hidden by the simpler InstantPanAndZoom fixture above.
-    combat=false; map.maximized=false; Maps.windowDB.scale=1; map:Show(); Maps:ApplyWindow()
+    map.protected=nil; combat=false; map.maximized=false; Maps.windowDB.scale=1; map:Show(); Maps:ApplyWindow()
     local fullRebuilds,fitUpdates=0,0
     local offsetX,offsetY=0,0
     local canvasWidth,canvasHeight=1000,700
@@ -726,7 +726,7 @@ if era then
         if self.panY==self.targetY then self.panY=nil end
     end
     function scroll:InstantPanAndZoom(scale,x,y)
-        assert(not combat)
+        assert(not combat or not map:IsProtected())
         local ratio=self:GetCanvasScale()/scale
         x=x+((self:GetCurrentScrollX() or .5)-x)*ratio
         y=y+((self:GetCurrentScrollY() or .5)-y)*ratio
@@ -776,9 +776,9 @@ if era then
     held=true
     Maps.resizeGrip.scripts.OnMouseDown(Maps.resizeGrip,'LeftButton')
     cursorX,cursorY=cursorX+50,cursorY-30; Maps.resizeGrip.scripts.OnUpdate()
-    combat=true; local before=fitUpdates; Maps:FinishResize()
+    map.protected=true; combat=true; local before=fitUpdates; Maps:FinishResize()
     assert(not Maps.resizing and fitUpdates==before and Maps.viewportRebuildPending)
-    combat=false; Maps:Refresh(); assert(not Maps.viewportRebuildPending and fitUpdates==before+1)
+    map.protected=nil; combat=false; Maps:Refresh(); assert(not Maps.viewportRebuildPending and fitUpdates==before+1)
 
     -- At fit zoom the letterboxed axis has inverted native scroll bounds.
     -- Native Clamp branches (rather than sorting these bounds): repeated calls
@@ -929,9 +929,9 @@ if era then
     assert(questie:GetParent()==scroll,'combat repair must not reparent addon widgets')
     combat=false; map.protected=mapProtected; Maps:LayoutCustomFrame()
     local before=questie.points[1]
-    combat=true; Maps.db.customFrame=false; Maps:Refresh()
+    map.protected=true; combat=true; Maps.db.customFrame=false; Maps:Refresh()
     assert(Maps.customFrame:IsShown() and questie.points[1]==before,'combat defers all frame/anchor changes')
-    combat=false; Maps:Refresh()
+    combat=false; map.protected=nil; Maps:Refresh()
     assert(not Maps.customFrame:IsShown() and questie:GetParent()==scroll and info:GetParent()==map)
     assert(questie.scripts.OnClick==handler and not hidden:IsShown() and questie:GetScale()==1)
     Maps.db.customFrame=true; Maps:Refresh(); map:Maximize()
@@ -1257,6 +1257,47 @@ if era then
     map:Maximize(); assert(not Maps.customCloseButton:IsShown())
     map:Minimize(); assert(Maps.customCloseButton:IsShown())
     print('PASS: unprotected native close, saved combat window dimensions/position, native Escape and Classic/fullscreen restoration.')
+end
+
+if era then
+    combat=false; map.protected=nil; map.maximized=false; Maps.db.customFrame=true
+    Maps.db.extendedZoom=true; Maps.db.resizable=true; Maps.db.movable=true
+    map:Show(); Maps:Refresh()
+    scroll.currentScale=scroll.zoomLevels[1].scale; Maps.extraZoomScale=nil
+    local secureBefore=secureCalls
+    combat=true
+    Wheel(1)
+    assert(Maps.zoomDiagnostics.reason=='applied' and scroll.currentScale>scroll.zoomLevels[1].scale,
+        'unprotected Era map supports the extended wheel zoom in combat')
+    local previousMouseDown=IsMouseButtonDown
+    IsMouseButtonDown=function() return true end
+    local width=map:GetWidth()
+    cursorX,cursorY=500,500
+    Maps.resizeGrip.scripts.OnMouseDown(Maps.resizeGrip,'LeftButton')
+    assert(Maps.resizing and Maps.resizeGrip.scripts.OnUpdate)
+    Event('PLAYER_REGEN_DISABLED')
+    assert(Maps.resizing,'combat alone must not cancel an unprotected resize')
+    cursorX,cursorY=580,460
+    Maps.resizeGrip.scripts.OnUpdate()
+    assert(map:GetWidth()>width,'dragging the corner changes size during combat')
+    Maps.resizeGrip.scripts.OnMouseUp()
+    assert(not Maps.resizing and Maps.combatWindow.width==map:GetWidth())
+    Maps.dragBar.scripts.OnDragStart()
+    assert(Maps.moving)
+    local x=Maps.windowDB.x
+    cursorX=cursorX+40; Maps.moveDriver.scripts.OnUpdate()
+    assert(Maps.windowDB.x~=x,'header movement also works in combat')
+    Maps.dragBar.scripts.OnDragStop()
+    assert(secureCalls==secureBefore,'ordinary combat map operations must not rely on securecallfunction')
+    Maps.resizeGrip.scripts.OnMouseDown(Maps.resizeGrip,'LeftButton')
+    width=map:GetWidth(); map.protected=true
+    cursorX=cursorX+40; Maps.resizeGrip.scripts.OnUpdate()
+    assert(not Maps.resizing and map:GetWidth()==width,'protection appearing mid-drag stops without mutation')
+    local canvas=map:GetCanvas(); map.protected=nil; canvas.protected=true
+    assert(not Maps:CanUseMapInCombat(),'protected canvas prevents extended zoom and resize')
+    canvas.protected=nil; combat=false; IsMouseButtonDown=previousMouseDown
+    Maps:Refresh()
+    print('PASS: combat wheel zoom, resizing and movement on unprotected Era frames; live protection guards.')
 end
 
 local account=PatchToolsMapsDB

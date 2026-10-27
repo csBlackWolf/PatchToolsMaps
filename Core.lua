@@ -7,6 +7,7 @@ function Maps:Refresh(rebuildZoom)
     if rebuildZoom then self.zoomPending=true end
     if not self.map then self:Attach(); return end
     if self.customFrame and not (InCombatLockdown and InCombatLockdown()) then self:DiscoverFrameWidgets() end
+    if InCombatLockdown and InCombatLockdown() then self:RestoreCombatWindow() end
     if self.resetPending then self:ResetWindow() else self:ApplyWindow() end
     if InCombatLockdown and InCombatLockdown() then self:RestoreCombatWindow(); self:RestoreCombatFrame() end
     self:ApplyMapOpacity()
@@ -15,7 +16,7 @@ function Maps:Refresh(rebuildZoom)
         and #self.map.ScrollContainer.zoomLevels>0 then
         self.zoomPending=nil
     end
-    if self.resetViewPending and not self.zoomPending and self:CanChangeWindow() and self.map:IsShown()
+    if self.resetViewPending and not self.zoomPending and not (InCombatLockdown and InCombatLockdown()) and self:CanChangeWindow() and self.map:IsShown()
         and self:GetReadyLayerIndex() then
         local scroll=self.map.ScrollContainer
         if scroll and type(scroll.ResetZoom)=="function" then
@@ -111,7 +112,7 @@ events:SetScript("OnEvent",function(_,event,name)
     if event=="ADDON_LOADED" and name==addon then Maps:Initialize()
     elseif Maps.initialized then
         if event=="PLAYER_REGEN_DISABLED" then
-            if Maps.resizeGrip then
+            if Maps.resizeGrip and not Maps:CanChangeWindow() then
                 Maps:FinishResize()
                 Maps.moveDriver:SetScript("OnUpdate",nil); Maps.moving=nil; Maps.extraZoomScale=nil
             end

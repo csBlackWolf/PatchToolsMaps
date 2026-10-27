@@ -1,15 +1,14 @@
-# PatchToolsMaps 0.3.0-alpha.16-local.2 — local Era patch data update — 2026-10-27
+# PatchToolsMaps 0.3.0-alpha.16 — 2026-10-27
 
-- Restore unexplored-area display modes for Classic Era client 1.15.9.70576 with a newly extracted, verified catalog. Retain support for the earlier Era build and Forever.
-- Automated mode and texture-size checks passed. In-game confirmation is pending. Local test only.
+Public alpha test: bugs are possible. The stable release remains available.
 
-# PatchToolsMaps 0.3.0-alpha.16-local.1 — local combat geometry test — 2026-10-27
+- Restore the unexplored-area display settings for Classic Era client build 70576.
+- Improve saved map size and position when opening the map during combat.
+- Use Blizzard's native close-button behavior and normal Escape handling.
 
-- Use Blizzard's ordinary XML close button directly, avoiding a protected action child that implicitly locks the map's geometry in combat.
-- Use the normal Escape window list instead of temporary key overrides.
-- Restore the previously applied window dimensions and position after the native combat opening resets them. Respect protection introduced by other addons.
+Please test all three exploration-display modes, then open and close the map during combat and check its size and position. Automated Era/Forever checks passed; in-game confirmation of these latest changes is pending.
 
-Automated Era/Forever checks passed, including simulated native window resets. In-game size, position, X and Escape confirmation is pending. Local test only.
+Recommended companion: PatchTools 0.9.0-alpha.14. Report problems in the [PatchTools issue tracker](https://github.com/csBlackWolf/PatchTools/issues).
 
 # PatchToolsMaps 0.3.0-alpha.15 — 2026-10-27
 

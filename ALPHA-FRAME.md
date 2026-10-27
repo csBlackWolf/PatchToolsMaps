@@ -1,16 +1,16 @@
-# Custom map frame alpha
+# Custom map frame
 
-Version: 0.3.0-alpha.13. Branch: alpha/custom-map-frame. Based on stable 0.2.1.
+Included in 0.3.0 after development on alpha/custom-map-frame.
 
-This is an experimental Classic Era frame. Forever keeps its native layout until a separate in-game test is possible. No stable release tag is changed.
+The modern frame is available on Classic Era. Forever keeps its native layout until a separate in-game test is possible.
 
 ## Try it
 
-Install the alpha package in place of PatchToolsMaps, keeping PatchTools installed. In `/patchtools` > Map, leave **Use the classic map frame** unchecked for the modern frame (the default on Era). Check it to restore the original frame. Existing position, size, zoom and reveal choices are preserved.
+Install PatchToolsMaps 0.3.0 or newer in place of PatchToolsMaps, keeping PatchTools installed. In `/patchtools` > Map, leave **Use the classic map frame** unchecked for the modern frame (the default on Era). Check it to restore the original frame. Existing position, size, zoom and reveal choices are preserved.
 
 The dark frame has a single compact title/button header and a one-line coordinate footer. Extra fixed info gets another footer row only when registered. The viewport follows the current map art aspect ratio, leaving no side panel at fit zoom. It keeps Blizzard's canvas, pins and data providers. Coordinates are provided by PatchToolsMaps using game map APIs, rather than depending on a particular coordinate addon. On another map, the player's current zone is shown beside player coordinates.
 
-## Compatibility in this first prototype
+## Addon compatibility
 
 - Questie, ATT and HandyNotes MapNotes Classic Era: adopt existing buttons from the installed Krowi WorldMapButtons library. Their click and tooltip handlers and enabled/disabled settings are preserved. Blizzard's own overlay buttons are excluded.
 - SilverDragon: adopt the existing world-map button from its LDB module, including its icon visibility menu.

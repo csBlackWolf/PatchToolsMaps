@@ -12,9 +12,9 @@ Settings defaults apply only to missing or invalid values. Preserve an explicit 
 
 ## Modern frame and integrations
 
-The modern frame is an Era alpha feature; Forever retains its native layout. `Frame.lua` owns chrome and explicitly registered fixed widgets, while `Window.lua` retains map coordinates. Classic and fullscreen views restore adopted widgets to their previous parents and anchors. Reject protected widgets. In combat, permit layout only for unprotected Era maps; defer frame-style changes and Forever layout.
+The modern frame is an Era feature since 0.3.0; Forever retains its native layout. `Frame.lua` owns chrome and explicitly registered fixed widgets, while `Window.lua` retains map coordinates. Classic and fullscreen views restore adopted widgets to their previous parents and anchors. Reject protected widgets. In combat, permit layout only for unprotected Era maps; defer frame-style changes and Forever layout.
 
-Prefer small toolbar icons for addon toggles, with state in tooltips. Keep geographical pins on the canvas and fixed controls/timers in the header or footer. [INTEGRATION.md](INTEGRATION.md) documents the action/widget APIs, load order, ownership, overflow and examples. [ALPHA-FRAME.md](ALPHA-FRAME.md) records the adapters and focused test cases. Those guides describe alpha APIs; check for their presence before using them with stable versions.
+Prefer small toolbar icons for addon toggles, with state in tooltips. Keep geographical pins on the canvas and fixed controls/timers in the header or footer. [INTEGRATION.md](INTEGRATION.md) documents the action/widget APIs, load order, ownership, overflow and examples. [ALPHA-FRAME.md](ALPHA-FRAME.md) records the adapters and focused test cases. These APIs are included in 0.3.0; check for their presence with older module versions.
 
 `Opacity.lua` shares the native `worldMapOpacity` CVar and `WorldMapFrame_SetOpacity` curve where available, with a fallback for other clients. Settings-window transparency remains separate. Only position tooltips owned by PatchToolsMaps; leave third-party tooltip handlers alone.
 
@@ -34,7 +34,7 @@ Fixtures cover loading, defaults, reveal, cache isolation, zoom limits, reset an
 
 ## Publication and documentation
 
-CurseForge project 1761299 requires PatchTools project 1758728. Keep stable work on `main` and the modern frame on `alpha/custom-map-frame` until it is ready to merge. Check the actual target client's interface number and keep TOC/localized version declarations consistent.
+CurseForge project 1761299 requires PatchTools project 1758728. Stable releases, including the modern frame, use `main`; keep alpha branches for development history. Check the actual target client's interface number and keep TOC/localized version declarations consistent.
 
 Push a branch commit first and wait for its webhook delivery before pushing a separate version tag. Never push branch and tag together with `--follow-tags`: simultaneous events previously produced duplicate packages. Tags select Release/Alpha/Beta; an ordinary documentation commit does not create a new addon release. Check the resulting build/file and distinguish moderation from availability in the client. Do not overwrite existing tags.
 

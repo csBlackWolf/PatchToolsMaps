@@ -4,6 +4,7 @@ _Your world map, with more freedom. The map module for PatchTools, for Classic E
 
 ## Features
 
+- A modern Classic Era frame with coordinates and room for addon buttons and buff timers
 - Move and resize the world map
 - Zoom in further with the mouse wheel
 - Choose how unexplored areas appear
@@ -11,8 +12,6 @@ _Your world map, with more freedom. The map module for PatchTools, for Classic E
 - Adjust everything through the PatchTools settings
 
 **[PatchTools](https://www.curseforge.com/wow/addons/patchtools) is required and must be enabled!**
-
-**Try the alpha:** a modern map frame for Classic Era with coordinates and room for addon buttons and buff timers outside the map. Install the PatchTools alpha alongside the PatchToolsMaps alpha for the complete experience. This is a public test version and is likely to contain bugs. The stable version remains available.
 
 ## Commands
 
@@ -37,6 +36,7 @@ _Deine Weltkarte mit mehr Freiheiten. Das Kartenmodul für PatchTools, für Clas
 
 ## Funktionen
 
+- Moderner Classic-Era-Rahmen mit Koordinaten und Platz für Addon-Buttons und Buff-Timer
 - Die Weltkarte frei verschieben und ihre Größe ändern
 - Mit dem Mausrad weiter hineinzoomen
 - Die Darstellung unentdeckter Gebiete selbst wählen
@@ -44,8 +44,6 @@ _Deine Weltkarte mit mehr Freiheiten. Das Kartenmodul für PatchTools, für Clas
 - Alles bequem in den PatchTools-Einstellungen anpassen
 
 **[PatchTools](https://www.curseforge.com/wow/addons/patchtools) wird benötigt und muss aktiviert sein!**
-
-**Probiere die Alpha:** ein moderner Kartenrahmen für Classic Era mit Koordinaten und Platz für Addon-Buttons und Buff-Timer außerhalb der Karte. Installiere die Alpha von PatchTools zusammen mit der Alpha von PatchToolsMaps, um alle neuen Funktionen zu nutzen. Dies ist eine öffentliche Testversion, die sehr wahrscheinlich noch Fehler enthält. Die stabile Version bleibt verfügbar.
 
 ## Befehle
 

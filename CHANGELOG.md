@@ -1,3 +1,20 @@
+# PatchToolsMaps 0.3.0 — 2026-10-27
+
+The modern Classic Era map is now part of the regular release.
+
+- A compact modern frame with addon buttons, player/cursor coordinates and zone-specific Nova World Buffs timers outside the map.
+- A toolbar toggle for Deathlog's heatmap, keeping the map itself clear.
+- Keep the classic frame available as an option; Forever retains its native layout.
+- Share map transparency between frames, with quick access by right-clicking the zone name.
+- Save window position and size per character, and improve scaling, mouse hit areas and minimum-zoom stability.
+- Zoom, move and resize during combat on unprotected Classic Era maps. Protected operations and frame-style changes wait until combat ends.
+- Restore unexplored-area display choices for Classic Era build 70576.
+- `/ptmaps debug` opens the shared support report with the matching PatchTools update.
+
+Requires PatchTools. Recommended companion: PatchTools 0.9.0.
+
+Validation: Classic Era gameplay testing by the maintainer and testers, plus automated Era/Forever checks. Forever's separate native layout remains in use; live Forever testing remains pending.
+
 # PatchToolsMaps 0.3.0-alpha.18 — 2026-10-27
 
 - Add `/ptmaps debug` to open the shared diagnostic report with game details and addon versions/load states. Requires PatchTools 0.9.0-alpha.15 or newer.

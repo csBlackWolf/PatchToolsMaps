@@ -12,12 +12,18 @@ local frames={}
 unpack=table.unpack or unpack
 local combat=false
 local secureHardwareClick=false
+local escapeTarget
+local UpdateSecureBindings=function() end
+local function HasTemplate(widget,name)
+    local template=rawget(widget,'template')
+    return type(template)=='string' and template:find(name,1,true)~=nil
+end
 local cursorX,cursorY=100,100
 local function Widget(parent)
     local w={parent=parent,scripts={},events={},shown=true,width=1000,height=700,scale=1,points={},frameLevel=1}
     local methods={}
     function methods:SetScript(k,v)
-        assert(not (rawget(self,'template')=='SecureActionButtonTemplate' and k=='OnClick'),
+        assert(not (HasTemplate(self,'SecureActionButtonTemplate') and k=='OnClick'),
             'do not replace the secure click handler with addon Lua')
         self.scripts[k]=v
     end
@@ -26,13 +32,19 @@ local function Widget(parent)
         self.scripts[k]=function(...) if old then old(...) end; v(...) end
     end
     function methods:RegisterEvent(k) self.events[k]=true end
-    function methods:SetSize(x,y) self.width,self.height=x,y end
+    function methods:SetSize(x,y)
+        assert(not (combat and rawget(self,'protected')),'do not resize protected frames in combat')
+        self.width,self.height=x,y
+    end
     function methods:SetWidth(x) self.width=x end
     function methods:SetHeight(y) self.height=y end
     function methods:GetWidth() return self.width end
     function methods:GetHeight() return self.height end
     function methods:GetSize() return self.width,self.height end
-    function methods:SetPoint(...) self.points[#self.points+1]={...} end
+    function methods:SetPoint(...)
+        assert(not (combat and rawget(self,'protected')),'do not reanchor protected frames in combat')
+        self.points[#self.points+1]={...}
+    end
     function methods:ClearAllPoints() self.points={} end
     function methods:GetNumPoints() return #self.points end
     function methods:GetPoint(i) return unpack(self.points[i]) end
@@ -53,7 +65,7 @@ local function Widget(parent)
     end
     function methods:GetAttribute(key) local attributes=rawget(self,'attributes'); return attributes and attributes[key] end
     function methods:Click(button,down)
-        if self.template=='SecureActionButtonTemplate' then
+        if HasTemplate(self,'SecureActionButtonTemplate') then
             if down then return end
             assert(self:GetAttribute('useOnKeyDown')==false)
             assert(self:GetAttribute('type')=='click')
@@ -80,8 +92,8 @@ local function Widget(parent)
     function methods:GetText() return self.text end
     function methods:SetChecked(s) self.checked=s end
     function methods:GetChecked() return self.checked end
-    function methods:Show() self.shown=true; if self.scripts.OnShow then self.scripts.OnShow(self) end end
-    function methods:Hide() self.shown=false; if self.scripts.OnHide then self.scripts.OnHide(self) end end
+    function methods:Show() self.shown=true; if self.scripts.OnShow then self.scripts.OnShow(self) end; UpdateSecureBindings() end
+    function methods:Hide() self.shown=false; if self.scripts.OnHide then self.scripts.OnHide(self) end; UpdateSecureBindings() end
     function methods:SetShown(v) if v then self:Show() else self:Hide() end end
     function methods:IsShown() return self.shown end
     function methods:CreateFontString() return Widget(self) end
@@ -100,6 +112,38 @@ local function Widget(parent)
     function methods:StopMovingOrSizing() self.isMoving=false end
     setmetatable(w,{__index=function(_,key) return methods[key] or function() end end})
     return w
+end
+UpdateSecureBindings=function()
+    for _,widget in ipairs(frames) do
+        if HasTemplate(widget,'SecureHandlerShowHideTemplate') then
+            local visible,current=true,widget
+            while current do
+                if not rawget(current,'shown') then visible=false; break end
+                current=rawget(current,'parent')
+            end
+            if visible~=(rawget(widget,'secureVisible')==true) then
+                widget.secureVisible=visible
+                local code=widget:GetAttribute(visible and '_onshow' or '_onhide')
+                if code then
+                    local handle={}
+                    function handle:GetName() return widget:GetName() end
+                    function handle:SetBindingClick(priority,key,name,button)
+                        assert(priority==true and key=='ESCAPE' and name==widget:GetName())
+                        escapeTarget={frame=widget,button=button}
+                    end
+                    function handle:ClearBindings()
+                        if escapeTarget and escapeTarget.frame==widget then escapeTarget=nil end
+                    end
+                    assert(load(code,'secure visibility snippet','t',{self=handle}))()
+                end
+            end
+        end
+    end
+end
+local function PressEscape()
+    if not escapeTarget then return false end
+    escapeTarget.frame:Click(escapeTarget.button)
+    return true
 end
 function CreateFrame(_,name,parent,template)
     local w=Widget(parent); w.TitleText=Widget(w); frames[#frames+1]=w
@@ -796,6 +840,28 @@ if era then
     local info=Widget(map); info:SetPoint('CENTER',map,'CENTER',0,0)
     assert(Maps:RegisterFrameWidget('Timer test',info,'info-right'))
     Maps:LayoutCustomFrame(); assert(info:GetParent()==Maps.customFrame.footer)
+    local mapWidth,mapHeight=map:GetSize()
+    local mapProtected=rawget(map,'protected')
+    map.protected=true; combat=true
+    library.SetPoints()
+    assert(questie:GetParent()==Maps.customFrame.buttons and questie.points[1][1]=='TOPLEFT'
+        and questie.points[1][2]==Maps.customFrame.buttons,'combat library relayout returns to the existing dock')
+    scroll:ClearAllPoints()
+    scroll:SetPoint('TOPLEFT',map,'TOPLEFT',20,-22)
+    scroll:SetPoint('BOTTOMRIGHT',map,'BOTTOMRIGHT',-10,28)
+    Maps:Refresh()
+    assert(scroll.points[1][4]==4 and scroll.points[1][5]==-36 and scroll.points[2][5]==24,
+        'combat refresh restores the cached viewport inset without resizing the protected map')
+    assert(map:GetWidth()==mapWidth and map:GetHeight()==mapHeight)
+    questie.protected=true
+    questie.points={{'TOPRIGHT',map,'TOPRIGHT',-4,-2}}
+    Maps:RestoreCombatFrame()
+    assert(questie.points[1][1]=='TOPRIGHT','a widget that becomes protected must be left alone')
+    questie.protected=false
+    questie.parent=scroll
+    Maps:RestoreCombatFrame()
+    assert(questie:GetParent()==scroll,'combat repair must not reparent addon widgets')
+    combat=false; map.protected=mapProtected; Maps:LayoutCustomFrame()
     local before=questie.points[1]
     combat=true; Maps.db.customFrame=false; Maps:Refresh()
     assert(Maps.customFrame:IsShown() and questie.points[1]==before,'combat defers all frame/anchor changes')
@@ -1099,7 +1165,7 @@ if era then
         close:Click('LeftButton')
     end
     assert(forwarded==4,'modern close keeps the original close action')
-    assert(Maps.customCloseButton.template=='SecureActionButtonTemplate')
+    assert(HasTemplate(Maps.customCloseButton,'SecureActionButtonTemplate'))
     assert(Maps.customCloseButton:GetAttribute('clickbutton')==WorldMapFrameCloseButton)
     combat=true
     for _=1,2 do
@@ -1110,9 +1176,15 @@ if era then
         assert(not map:IsShown(),'a map opened during combat can close immediately through the native action')
     end
     assert(forwarded==6)
+    map:Show()
+    assert(escapeTarget and escapeTarget.frame==Maps.customCloseButton)
+    assert(PressEscape() and not map:IsShown(),'Escape securely closes a map opened in combat')
+    assert(not escapeTarget and not PressEscape(),'normal Escape resumes after the map closes')
+    map:Show(); assert(PressEscape() and not map:IsShown(),'Escape also works after reopening in combat')
     combat=false
     map:Show()
     Maps.db.customFrame=false; Maps:Refresh()
+    assert(not escapeTarget,'the modern map must not capture Escape in Classic mode')
     assert(not Maps.customCloseButton:IsShown() and WorldMapFrameCloseButton:IsMouseEnabled())
     assert(WorldMapFrameCloseButton:GetAlpha()==Maps.nativeCloseAppearance.alpha)
     Maps.db.customFrame=true; Maps:Refresh()

@@ -79,6 +79,33 @@ local function Restore(entry)
     for _,point in ipairs(entry.points) do frame:SetPoint(unpack(point)) end
 end
 
+local function RestoreUnprotected(entry)
+    local widget=entry.frame
+    -- Combat repair may only restore existing, unprotected children in place.
+    -- Never reparent a widget or resize/reposition the protected map here.
+    if not Allowed(widget) or widget:GetParent()~=entry.parent then return end
+    local changed=widget:GetNumPoints()~=#entry.points
+    if not changed then
+        for i,point in ipairs(entry.points) do
+            local current={widget:GetPoint(i)}
+            for j=1,5 do if current[j]~=point[j] then changed=true; break end end
+            if changed then break end
+        end
+    end
+    if widget:GetScale()~=entry.scale then widget:SetScale(entry.scale) end
+    if not changed then return end
+    widget:ClearAllPoints()
+    for _,point in ipairs(entry.points) do widget:SetPoint(unpack(point)) end
+end
+
+function Maps:RestoreCombatFrame()
+    if not self.customControlsPlaced or not self.customFrame then return end
+    for _,entry in ipairs(self.frameWidgets or {}) do
+        if entry.docked then RestoreUnprotected(entry.docked) end
+    end
+    if self.combatCanvas then RestoreUnprotected(self.combatCanvas) end
+end
+
 -- Addons may register an existing unprotected widget. Never clone its click
 -- handlers, change its visibility preference, or move map pins into the dock.
 -- Slots: buttons, info-left, info-right.
@@ -195,7 +222,8 @@ function Maps:InstallCustomFrame(map)
         nativeClose=CreateFrame("Button",nil,map,"UIPanelCloseButton")
         nativeClose:Hide()
     end
-    local close=CreateFrame("Button",nil,frame,"SecureActionButtonTemplate")
+    local close=CreateFrame("Button","PatchToolsMapsModernCloseButton",frame,
+        "SecureActionButtonTemplate,SecureHandlerShowHideTemplate")
     self.customCloseButton=close
     close:SetSize(32,32); close:SetScale(1)
     close:SetPoint("TOPRIGHT",map,"TOPRIGHT",-4,-3)
@@ -208,6 +236,11 @@ function Maps:InstallCustomFrame(map)
     close:SetAttribute("useOnKeyDown",false)
     close:SetAttribute("type","click")
     close:SetAttribute("clickbutton",nativeClose)
+    -- These snippets execute through Blizzard's secure show/hide handlers,
+    -- including when the parent map opens or closes during combat. Never set
+    -- override bindings from an addon OnShow callback in combat.
+    close:SetAttribute("_onshow",[[self:SetBindingClick(true,"ESCAPE",self:GetName(),"LeftButton")]])
+    close:SetAttribute("_onhide",[[self:ClearBindings()]])
     if WorldMapFrameCloseButton then
         self.nativeCloseAppearance={alpha=WorldMapFrameCloseButton:GetAlpha(),mouse=WorldMapFrameCloseButton:IsMouseEnabled()}
     end
@@ -262,6 +295,7 @@ function Maps:InstallCustomFrame(map)
         if elapsedTotal<.15 then return end
         elapsedTotal=0
         self:UpdateFrameCoordinates()
+        if InCombatLockdown and InCombatLockdown() then self:RestoreCombatFrame() end
         local actionsChanged=self:UpdateMapActions()
         if self:UpdateNovaTimers() or actionsChanged then self:Refresh() end
     end)
@@ -292,7 +326,8 @@ function Maps:UpdateFrameCoordinates()
 end
 
 function Maps:LayoutCustomFrame()
-    if not self.customFrame or self.layingOutFrame or (InCombatLockdown and InCombatLockdown()) then return end
+    if not self.customFrame or self.layingOutFrame then return end
+    if InCombatLockdown and InCombatLockdown() then self:RestoreCombatFrame(); return end
     self.layingOutFrame=true
     local enabled=self:UseCustomFrame()
     if not enabled and self.opacityPopup then self.opacityPopup:Hide() end
@@ -353,9 +388,11 @@ function Maps:LayoutCustomFrame()
                     widget:SetPoint("BOTTOMRIGHT",self.customFrame.footer,"BOTTOMRIGHT",-right,self.novaRowHeight or 0)
                     if widget:IsShown() then right=right+widget:GetWidth()+8 end
                 end
-            elseif entry.original then Restore(entry.original); entry.original=nil end
+                entry.docked=Snapshot(widget)
+            elseif entry.original then Restore(entry.original); entry.original=nil; entry.docked=nil end
         end
     end
+    self.combatCanvas=enabled and Snapshot(self.map.ScrollContainer) or nil
     if enabled then self:UpdateFrameCoordinates() end
     self.layingOutFrame=nil
 end

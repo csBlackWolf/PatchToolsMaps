@@ -8,6 +8,7 @@ function Maps:Refresh(rebuildZoom)
     if not self.map then self:Attach(); return end
     if self.customFrame and not (InCombatLockdown and InCombatLockdown()) then self:DiscoverFrameWidgets() end
     if self.resetPending then self:ResetWindow() else self:ApplyWindow() end
+    if InCombatLockdown and InCombatLockdown() then self:RestoreCombatFrame() end
     self:ApplyMapOpacity()
     if self.zoomPending and not (InCombatLockdown and InCombatLockdown()) and self.map:IsShown()
         and self.map.ScrollContainer and type(self.map.ScrollContainer.zoomLevels)=="table"

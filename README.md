@@ -9,13 +9,13 @@ _Your world map, with more freedom. The map module for PatchTools, for Classic E
 - Choose how unexplored areas appear
 - Remember your preferred position and size for each character
 - Adjust map transparency
-- A modern Classic Era frame with player and cursor coordinates
+- A modern frame with player and cursor coordinates
 - Keep supported addon buttons and buff timers outside the map
 - Switch back to the classic frame whenever you prefer
 
 Adjust everything through the PatchTools settings. Right-click the zone name in the modern frame for quick access to map transparency.
 
-The modern frame is available on Classic Era. Forever keeps its native map layout.
+The modern frame supports Classic Era and Forever.
 
 **[PatchTools](https://www.curseforge.com/wow/addons/patchtools) is required and must be enabled!**
 
@@ -47,13 +47,13 @@ _Deine Weltkarte mit mehr Freiheiten. Das Kartenmodul für PatchTools, für Clas
 - Die Darstellung unentdeckter Gebiete selbst wählen
 - Position und Größe für jeden Charakter merken
 - Die Kartentransparenz anpassen
-- Moderner Classic-Era-Rahmen mit Spieler- und Mauskoordinaten
+- Moderner Rahmen mit Spieler- und Mauskoordinaten
 - Unterstützte Addon-Buttons und Buff-Timer außerhalb der Karte platzieren
 - Bei Bedarf jederzeit zum klassischen Rahmen wechseln
 
 Alles bequem in den PatchTools-Einstellungen anpassen. Per Rechtsklick auf den Gebietsnamen im modernen Rahmen erreichst du die Kartentransparenz auch direkt.
 
-Der moderne Rahmen ist auf Classic Era verfügbar. Forever behält sein ursprüngliches Kartenlayout.
+Der moderne Rahmen unterstützt Classic Era und Forever.
 
 **[PatchTools](https://www.curseforge.com/wow/addons/patchtools) wird benötigt und muss aktiviert sein!**
 

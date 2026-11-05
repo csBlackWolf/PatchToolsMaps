@@ -91,6 +91,11 @@ local function Widget(parent)
             secureHardwareClick=previous
         elseif self.scripts.OnClick then self.scripts.OnClick(self,button or 'LeftButton',down) end
     end
+    function methods:GetTextColor() return unpack(rawget(self,"textColor") or {1,1,1,1}) end
+    function methods:SetTextColor(...) self.textColor={...} end
+    function methods:GetFont() return 'Fonts/test.ttf',rawget(self,'fontSize') or 12 end
+    function methods:GetRegions() return unpack(rawget(self,"regions") or {}) end
+    function methods:IsObjectType(kind) return rawget(self,"objectType")==kind end
     function methods:GetTexture() return rawget(self,"texture") end
     function methods:GetScale() return self.scale end
     function methods:SetScale(s) self.scale=s end
@@ -241,9 +246,9 @@ else
 end
 PT:SelectOptionsPage('general')
 assert(PT:SelectOptionsPage('missing')==false and PT.optionPages.general:IsShown())
-PatchToolsMapsDB={customFrame=false,scale=1,x=.2,y=.8}
+PatchToolsMapsDB={customFrame=false,foreverFrameAvailable=true,scale=1,x=.2,y=.8}
 local Maps={}
-for _,name in ipairs({'Locales.lua','OverlayData.lua','GeneratedCatalog.lua','GeneratedCatalogEra.lua','GeneratedCatalogEra70576.lua','Reveal.lua','Zoom.lua','Nova.lua','Opacity.lua','Frame.lua','Actions.lua','Window.lua','Options.lua','Core.lua'}) do
+for _,name in ipairs({'Locales.lua','OverlayData.lua','GeneratedCatalog.lua','GeneratedCatalogEra.lua','GeneratedCatalogEra70576.lua','Reveal.lua','Zoom.lua','Nova.lua','Opacity.lua','Forever.lua','Frame.lua','Actions.lua','Window.lua','Options.lua','Core.lua'}) do
     assert(loadfile(MAPS_PATH..name))('PatchToolsMaps',Maps)
 end
 Event('ADDON_LOADED','PatchToolsMaps')
@@ -265,7 +270,7 @@ if era then
     assert(classic:GetChecked()==false)
     classic:SetChecked(true); classic.scripts.OnClick(classic); assert(Maps.db.customFrame==false)
 else
-    assert(not Maps.optionsUI.checks.customFrame,'Forever keeps its native layout')
+    assert(Maps.optionsUI.checks.customFrame,'Forever offers the same frame choice')
 end
 local revealChoices=OpenDropdown(Maps.optionsUI.mode)
 assert(#revealChoices==3 and revealChoices[2].checked)
@@ -307,6 +312,51 @@ if era then
     WorldMapTitleButton:SetScript('OnDragStart',function() nativeDragCalls=nativeDragCalls+1 end)
     WorldMapTitleButton:SetScript('OnUpdate',function() end)
 end
+if not era then
+    map.BorderFrame=Widget(map); map.BorderFrame:EnableMouse(true)
+    map.BorderFrame.MaximizeMinimizeFrame=Widget(map.BorderFrame)
+    map.TitleCanvasSpacerFrame=Widget(map)
+    map.NavBar=Widget(map)
+    local navArt=Widget(map.NavBar); navArt.objectType='Texture'
+    map.NavBar.regions={navArt}
+    map.NavBar.homeButton=Widget(map.NavBar); map.NavBar.homeButton.text=Widget(map.NavBar.homeButton)
+    map.NavBar.navList={map.NavBar.homeButton}
+    map.WorldMapTrackingOptionsButton=Widget(map)
+    map.WorldMapTrackingOptionsButton:SetSize(32,32)
+    function map:TriggerEvent(event) self.lastNativeEvent=event end
+    map.WorldMapTrackingOptionsButton:SetScript('OnClick',function(button)
+        button:GetParent():TriggerEvent('NativeFilterClick')
+        map.filterClicked=true
+    end)
+    map.WorldMapTrackingPinButton=Widget(map)
+    map.WorldMapTrackingPinButton:SetSize(32,32)
+    map.WorldMapTrackingPinButton:SetScript('OnHide',function(button)
+        button:GetParent():TriggerEvent('WaypointLocationToggleUpdate')
+    end)
+    map.SidePanelToggle=Widget(map); map.SidePanelToggle:SetSize(32,32)
+    function map:IsSidePanelShown() return self.QuestLog:IsShown() end
+    function map.SidePanelToggle:Refresh() return self:GetParent():IsSidePanelShown() end
+    local coords=Widget(map); coords.PlayerCoords=Widget(coords); coords.CursorCoords=Widget(coords)
+    map.overlayFrames={coords}
+    TomTomWorldFrame=Widget(map); TomTomWorldFrame:SetAlpha(.8)
+    map.NavBar:SetPoint('TOPLEFT',map.TitleCanvasSpacerFrame,'TOPLEFT',64,-25)
+    map.QuestLog=Widget(map); map.questLogWidth=333
+    map.QuestLog:SetPoint('TOPRIGHT',map,'TOPRIGHT',-3,-25)
+    map.QuestLog.QuestsFrame=Widget(map.QuestLog)
+    local questScroll=Widget(map.QuestLog.QuestsFrame)
+    map.QuestLog.QuestsFrame.ScrollFrame=questScroll
+    questScroll.Background=Widget(questScroll)
+    questScroll.BorderFrame=Widget(questScroll); questScroll.BorderFrame.Border=Widget(questScroll.BorderFrame)
+    map.QuestLog.DetailsFrame=Widget(map.QuestLog.QuestsFrame)
+    local details=map.QuestLog.DetailsFrame
+    details:SetSize(308,502)
+    details.ScrollFrame=Widget(details); details.ScrollFrame:SetHeight(430)
+    details.ScrollFrame.Contents=Widget(details.ScrollFrame)
+    local body=Widget(details.ScrollFrame.Contents); body.objectType='FontString'; body:SetTextColor(.2,.13,.05,1)
+    local title=Widget(details.ScrollFrame.Contents); title.objectType='FontString'; title.fontSize=18; title:SetTextColor(.2,.13,.05,1)
+    details.ScrollFrame.Contents.regions={body,title}
+    function map:UpdateSpacerFrameAnchoring() end
+end
 map.maximized=false
 map:SetPoint('CENTER',UIParent,'CENTER',0,0)
 function map:IsMaximized() return self.maximized end
@@ -324,6 +374,10 @@ function map:AddMaskableTexture() error('addon texture must not enter Blizzard m
 local canvas=Widget(map)
 local scroll=Widget(map)
 map.ScrollContainer=scroll
+if not era then
+    scroll:SetPoint('TOPLEFT',map.TitleCanvasSpacerFrame,'BOTTOMLEFT',0,0)
+    scroll:SetPoint('BOTTOMLEFT',map,'BOTTOMLEFT',0,2)
+end
 function map:GetCanvas() return canvas end
 function map:GetCanvasContainer() return scroll end
 function scroll:GetCurrentLayerIndex()
@@ -947,7 +1001,60 @@ if era then
     LibStub=nil
     print('PASS: alpha frame docking, original addon callbacks, coordinates, restoration, fullscreen and combat guards.')
 else
-    assert(not Maps.customFrame,'Forever retains its tested native layout during the Era frame alpha')
+    assert(Maps.customFrame,'Forever installs modern chrome too')
+    Maps.db.customFrame=true; Maps:Refresh()
+    assert(Maps.customFrame:IsShown() and Maps.foreverFrame.enabled)
+    assert(map.BorderFrame:GetAlpha()==0 and not map.BorderFrame:IsMouseEnabled())
+    assert(#map.NavBar.points==2 and map.NavBar:GetHeight()==28,'navigation has both edges and a fixed row height')
+    assert(map.NavBar.regions[1]:GetAlpha()==0,'remove native navigation strip art')
+    assert(map.overlayFrames[1]:GetAlpha()==0 and TomTomWorldFrame:GetAlpha()==0,'single modern coordinate presentation')
+    assert(map.QuestLog.QuestsFrame.ScrollFrame.BorderFrame.Border:GetAlpha()==0,'replace quest-log ornamentation')
+    assert(map.WorldMapTrackingOptionsButton:GetParent()==map
+        and map.WorldMapTrackingOptionsButton.points[1][2]==scroll
+        and map.WorldMapTrackingOptionsButton.points[1][1]=='TOPRIGHT',
+        'native filter sits above the map beside the quest search')
+    assert(map.SidePanelToggle.points[1][1]=='BOTTOMRIGHT' and map.SidePanelToggle.points[1][2]==scroll,
+        'quest sidebar toggle stays at the lower map/quest boundary')
+    local details=map.QuestLog.DetailsFrame
+    assert(details.points[2][1]=='BOTTOMRIGHT' and details.points[2][2]==map.QuestLog,
+        'quest detail bottom follows the available sidebar height')
+    assert(details.ScrollFrame:GetHeight()==map.QuestLog:GetHeight()-76)
+    local text=details.ScrollFrame.Contents.regions
+    assert(text[1].textColor[1]==.9 and text[2].textColor[2]==.82,'quest body and headers contrast with dark background')
+    assert(map.SidePanelToggle:Refresh()==map.QuestLog:IsShown(),'native sidebar callback retains map API')
+    map.WorldMapTrackingPinButton:Hide()
+    assert(map.lastNativeEvent=='WaypointLocationToggleUpdate','native pin hide callback retains map API')
+    map.WorldMapTrackingPinButton:Show()
+    map.WorldMapTrackingOptionsButton:Click()
+    assert(map.filterClicked,'native filter handler remains usable')
+    assert(map.BorderFrame.MaximizeMinimizeFrame:GetParent()==Maps.customFrame)
+    assert(scroll.points[1][2]==map and scroll.points[2][4]==-337,
+        'reserve native quest-log width beside the canvas')
+    local beforeX=Maps.windowDB.x
+    Maps.customHeader.scripts.OnDragStart()
+    cursorX=cursorX+20; Maps.moveDriver.scripts.OnUpdate()
+    Maps.customHeader.scripts.OnDragStop()
+    assert(Maps.windowDB.x~=beforeX,'modern Forever title supports dragging')
+    map.QuestLog:Hide(); map:UpdateSpacerFrameAnchoring()
+    assert(scroll.points[2][4]==-4,'closing quest log returns its space to the canvas')
+    map:Maximize(); assert(not Maps.customFrame:IsShown() and map.BorderFrame:GetAlpha()==1)
+    assert(map.BorderFrame.MaximizeMinimizeFrame:GetParent()==map.BorderFrame)
+    map:Minimize(); assert(Maps.customFrame:IsShown())
+    Maps.db.customFrame=false; Maps:Refresh()
+    assert(not Maps.customFrame:IsShown() and map.BorderFrame:GetAlpha()==1)
+    assert(map.overlayFrames[1]:GetAlpha()==1 and TomTomWorldFrame:GetAlpha()==.8,'native mode restores coordinate presentations')
+    assert(map.NavBar.regions[1]:GetAlpha()==1 and map.NavBar:GetHeight()==700,'restore native nav art and dimensions')
+    assert(map.WorldMapTrackingOptionsButton:GetParent()==map,'restore original filter ownership')
+    assert(map.QuestLog.DetailsFrame:GetHeight()==502 and map.QuestLog.DetailsFrame.ScrollFrame:GetHeight()==430,
+        'native detail geometry restored')
+    assert(map.QuestLog.DetailsFrame.ScrollFrame.Contents.regions[1].textColor[1]==.2,'restore parchment text colors')
+    assert(scroll.points[1][2]==map.TitleCanvasSpacerFrame,'native anchors are restored')
+    Maps.initialized=nil; Maps.db.foreverFrameAvailable=nil; Maps:Initialize()
+    assert(Maps.db.customFrame==true and Maps.db.foreverFrameAvailable)
+    Maps.db.customFrame=false; Maps:Initialize()
+    assert(Maps.db.customFrame==false,'migration preserves later explicit native choice')
+    Maps.initialized=true; Maps:Refresh()
+    print('PASS: Forever modern frame, movement, quest sidebar, fullscreen, native restoration and migration.')
 end
 
 if era then

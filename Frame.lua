@@ -4,7 +4,7 @@ Maps.frameWidgetAPI=1
 -- Alpha chrome surrounds the existing map. Its canvas and data providers stay
 -- owned by Blizzard and the addons which created them.
 function Maps:UseCustomFrame()
-    return PatchTools and PatchTools.isClassicEra and self.db.customFrame
+    return PatchTools and (PatchTools.isClassicEra or PatchTools.isForever) and self.db.customFrame
         and not (self.map.IsMaximized and self.map:IsMaximized())
 end
 
@@ -222,7 +222,7 @@ function Maps:LayoutDeathlogControl(enabled)
 end
 
 function Maps:InstallCustomFrame(map)
-    if not (PatchTools and PatchTools.isClassicEra) then return end
+    if not (PatchTools and (PatchTools.isClassicEra or PatchTools.isForever)) then return end
     local frame=CreateFrame("Frame",nil,map,"BackdropTemplate")
     self.customFrame=frame
     frame:Hide()
@@ -289,6 +289,7 @@ function Maps:InstallCustomFrame(map)
             self.frameArt[#self.frameArt+1]={region=region,alpha=region:GetAlpha()}
         end
     end
+    if PatchTools.isForever then self:InstallForeverFrame(map) end
     -- Read-only coordinate updates; never change another addon's options.
     local elapsedTotal=0
     frame:SetScript("OnUpdate",function(_,elapsed)
@@ -296,6 +297,7 @@ function Maps:InstallCustomFrame(map)
         if elapsedTotal<.15 then return end
         elapsedTotal=0
         self:UpdateFrameCoordinates()
+        if self.foreverFrame then self:UpdateForeverPresentation() end
         if InCombatLockdown and InCombatLockdown() then self:RestoreCombatFrame() end
         local actionsChanged=self:UpdateMapActions()
         if self:UpdateNovaTimers() or actionsChanged then self:Refresh() end
@@ -338,6 +340,7 @@ function Maps:LayoutCustomFrame()
     self:UpdateNovaTimers()
     self.customFrame:SetShown(enabled)
     self.customCloseButton:SetShown(enabled)
+    if self.foreverFrame then self:LayoutForeverFrame(enabled) end
     if WorldMapFrameCloseButton and self.nativeCloseAppearance then
         WorldMapFrameCloseButton:SetAlpha(enabled and 0 or self.nativeCloseAppearance.alpha)
         WorldMapFrameCloseButton:EnableMouse(not enabled and self.nativeCloseAppearance.mouse)
@@ -379,7 +382,11 @@ function Maps:LayoutCustomFrame()
                 local item=toolbar.items[entry]
                 local scale=item and item.scale or 1
                 widget:SetScale(scale)
-                widget:SetParent(entry.slot=="buttons" and self.customFrame.buttons or self.customFrame.footer)
+                -- Native map overlays call methods on GetParent(). Their
+                -- anchors may use our dock, but their owner must remain the map.
+                if not entry.keepParent then
+                    widget:SetParent(entry.slot=="buttons" and self.customFrame.buttons or self.customFrame.footer)
+                end
                 widget:ClearAllPoints()
                 if entry.slot=="buttons" then
                     widget:SetPoint("TOPLEFT",self.customFrame.buttons,"TOPLEFT",item and item.x/scale or 0,item and -item.y/scale or 0)

@@ -42,7 +42,7 @@ function Maps:BuildOptions(parent)
         end
     end)
     Label(parent,self:T("VISUAL"),-310)
-    if PatchTools.isClassicEra then
+    if PatchTools.isClassicEra or PatchTools.isForever then
         Check("customFrame","FRAME_CLASSIC_OPTION",-339,true)
         Label(parent,self:T("FRAME_CLASSIC_HINT"),-380)
     end

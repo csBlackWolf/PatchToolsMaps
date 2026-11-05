@@ -1,3 +1,14 @@
+# PatchToolsMaps 0.3.1 — 2026-11-05
+
+- Bring the modern map frame to Forever, including movement, resizing and the classic-frame option.
+- Integrate Forever's map navigation and quest panel into the compact layout.
+- Keep Blizzard's filter and quest-panel controls beside the map rather than among addon buttons.
+- Improve quest-text contrast, keep quest action buttons inside the window and match the quest-list border.
+- Avoid duplicate coordinate displays and restore the native layout when switching back.
+- Fix native map-control ownership so opening the map no longer interrupts its initialization.
+
+Validation: the Forever layout and quest details were checked in game. Automated Classic Era/Forever layout, restoration, interaction and map-catalog checks pass.
+
 # PatchToolsMaps 0.3.0 — 2026-10-27
 
 The modern Classic Era map is now part of the regular release.

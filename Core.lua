@@ -80,7 +80,13 @@ function Maps:Initialize()
     for key,value in pairs({movable=true,resizable=true,extendedZoom=true,mode="mist"}) do
         if type(self.db[key])~=type(value) then self.db[key]=value end
     end
-    if type(self.db.customFrame)~="boolean" then self.db.customFrame=PT.isClassicEra==true end
+    -- Earlier versions forced Forever to native chrome without offering a
+    -- choice. Migrate that forced value once; later explicit choices survive.
+    if PT.isForever and not self.db.foreverFrameAvailable then
+        self.db.customFrame=true
+        self.db.foreverFrameAvailable=true
+    end
+    if type(self.db.customFrame)~="boolean" then self.db.customFrame=true end
     if self.db.mode~="classic" and self.db.mode~="mist" and self.db.mode~="full" then self.db.mode="mist" end
     local scale=self.windowDB.scale
     self.windowDB.scale=scale==scale and scale<math.huge and math.max(.6,scale) or 1

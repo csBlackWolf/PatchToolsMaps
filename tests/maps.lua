@@ -112,6 +112,7 @@ local function Widget(parent)
         if self.scripts.OnValueChanged then self.scripts.OnValueChanged(self,value) end
     end
     function methods:GetText() return self.text end
+    function methods:Disable() self.enabled=false end
     function methods:SetChecked(s) self.checked=s end
     function methods:GetChecked() return self.checked end
     function methods:Show() self.shown=true; if self.scripts.OnShow then self.scripts.OnShow(self) end; UpdateSecureBindings() end
@@ -407,6 +408,9 @@ function scroll:CreateZoomLevels()
     self.zoomLevels=setmetatable({{scale=1,layerIndex=1},{scale=2,layerIndex=1}},
         {__newindex=function() error('addon must not mutate Blizzard zoomLevels') end})
 end
+function scroll:OnCanvasSizeChanged()
+    self:CreateZoomLevels(); self:ResetZoom(true)
+end
 function scroll:ResetZoom(ignoreScaleRatio)
     assert(ignoreScaleRatio==true)
     self.currentScale=self.zoomLevels[1].scale
@@ -595,6 +599,8 @@ Wheel(-1); assert(scroll.currentScale==2.5)
 Wheel(-1); assert(scroll.currentScale==2 and Maps.extraZoomScale==2)
 for i=1,20 do Wheel(1) end
 assert(scroll.currentScale==8 and scroll.zoomLevels==levels and #levels==2)
+
+scroll.currentScale=2
 map.protected=true; combat=true; local secureBefore=secureCalls
 Wheel(1); assert(secureCalls==secureBefore and scroll.currentScale==2)
 SlashCmdList.PATCHTOOLSMAPS('reset')
@@ -1002,6 +1008,7 @@ if era then
     print('PASS: alpha frame docking, original addon callbacks, coordinates, restoration, fullscreen and combat guards.')
 else
     assert(Maps.customFrame,'Forever installs modern chrome too')
+    map:Show()
     Maps.db.customFrame=true; Maps:Refresh()
     assert(Maps.customFrame:IsShown() and Maps.foreverFrame.enabled)
     assert(map.BorderFrame:GetAlpha()==0 and not map.BorderFrame:IsMouseEnabled())
@@ -1030,13 +1037,30 @@ else
     assert(map.BorderFrame.MaximizeMinimizeFrame:GetParent()==Maps.customFrame)
     assert(scroll.points[1][2]==map and scroll.points[2][4]==-337,
         'reserve native quest-log width beside the canvas')
+    local art=C_Map.GetMapArtLayers(map:GetMapID())[1]
+    local artRatio=art.layerHeight/art.layerWidth
+    local left,top,right,bottom=Maps:GetCustomFrameInsets(map:GetWidth())
+    local expectedHeight=(map:GetWidth()-left+right-map.questLogWidth)*artRatio-top+bottom+28
+    assert(math.abs(map:GetHeight()-expectedHeight)<.00001,
+        'Forever height fits map art after subtracting quest sidebar and reserving navigation')
     local beforeX=Maps.windowDB.x
     Maps.customHeader.scripts.OnDragStart()
     cursorX=cursorX+20; Maps.moveDriver.scripts.OnUpdate()
     Maps.customHeader.scripts.OnDragStop()
     assert(Maps.windowDB.x~=beforeX,'modern Forever title supports dragging')
+    local rebuilds=0
+    local createZoom=scroll.CreateZoomLevels
+    scroll.CreateZoomLevels=function(self) rebuilds=rebuilds+1; createZoom(self) end
     map.QuestLog:Hide(); map:UpdateSpacerFrameAnchoring()
     assert(scroll.points[2][4]==-4,'closing quest log returns its space to the canvas')
+    assert(math.abs(map:GetHeight()-((map:GetWidth()-left+right)*artRatio-top+bottom+28))<.00001,
+        'collapsed sidebar expands the canvas without letterboxing')
+    assert(rebuilds>0 and math.abs(scroll:GetCanvasScale()-scroll.zoomLevels[1].scale)<.00001,
+        'collapsing the sidebar rebuilds fit zoom after restoring custom anchors')
+    scroll.currentScale=scroll.zoomLevels[1].scale*2
+    map.QuestLog:Show(); map:UpdateSpacerFrameAnchoring()
+    assert(scroll.points[2][4]==-337 and math.abs(scroll:GetCanvasScale()-scroll.zoomLevels[1].scale)<.00001,
+        'expanding the sidebar fits and centers using native zoom state')
     map:Maximize(); assert(not Maps.customFrame:IsShown() and map.BorderFrame:GetAlpha()==1)
     assert(map.BorderFrame.MaximizeMinimizeFrame:GetParent()==map.BorderFrame)
     map:Minimize(); assert(Maps.customFrame:IsShown())
@@ -1428,3 +1452,25 @@ assert(Maps.windowDB.scale==1 and Maps.windowDB.x==nil,'reset survives another i
 assert(account.scale==1 and account.x==.2,'legacy global geometry remains unchanged')
 PT.RegisterOptionsPage=register
 print('PASS: map character migration, isolation and reset without importing old geometry again.')
+
+-- Ownership tracing must be opt-in, bounded and preserve native return values.
+local previousSecureVariable=issecurevariable
+local unsafeScroll=false
+issecurevariable=function(object,key)
+    if object==scroll and key=="targetScrollY" and unsafeScroll then return false,"PatchToolsMaps" end
+    return true
+end
+Maps.scrollSecurityEnabled=nil
+Maps:CaptureScrollSecurity("disabled")
+assert(not Maps.scrollSecurityRows)
+Maps:ToggleScrollSecurity()
+assert(#Maps.scrollSecurityRows==1)
+local first,second,third=Maps:CallMapFunction(function() unsafeScroll=true; return 1,nil,3 end)
+assert(first==1 and second==nil and third==3)
+assert(#Maps.scrollSecurityRows==2 and Maps.scrollSecurityRows[2]:find("targetScrollY",1,true))
+for i=1,80 do unsafeScroll=not unsafeScroll; Maps:CaptureScrollSecurity("test") end
+assert(#Maps.scrollSecurityRows==24)
+Maps:ToggleScrollSecurity()
+assert(not Maps.scrollSecurityEnabled)
+issecurevariable=previousSecureVariable
+print('PASS: opt-in ownership trace records transitions without changing native return values.')

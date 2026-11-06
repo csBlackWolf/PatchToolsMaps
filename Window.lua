@@ -125,6 +125,15 @@ function Maps:ApplyWindow()
         resized=self:ApplyEraChrome(self.windowDB.scale,false) or resized
     else
         map:SetScale(self.originalScale*self.windowDB.scale)
+        if self.foreverFrame and self:UseCustomFrame() then
+            local height=self:GetCustomFrameHeight(map:GetWidth())
+            resized=math.abs(map:GetHeight()-height)>.01
+            if resized then map:SetHeight(height) end
+            self.foreverFrame.customHeight=true
+        elseif self.foreverFrame and self.foreverFrame.customHeight then
+            map:SetHeight(self.originalHeight)
+            self.foreverFrame.customHeight=nil
+        end
     end
     if self.windowDB.x and self.windowDB.y then
         local ratio=UIParent:GetEffectiveScale()/map:GetEffectiveScale()
@@ -135,6 +144,7 @@ function Maps:ApplyWindow()
     if self.ownsDragBar then self.dragBar:SetShown(self.db.movable) end
     self.resizeGrip:SetShown(self.db.resizable)
     if self.customFrame then self:LayoutCustomFrame() end
+    if self.foreverFrame and resized then self:QueueForeverViewportRefresh() end
     if self.eraChrome and (resized or (self.viewportRebuildPending and not self.resizing)) then
         self:RefreshEraViewport(view)
     end
@@ -304,7 +314,12 @@ function Maps:InstallWindow(map)
     grip:SetScript("OnMouseUp",function() self:FinishResize() end)
     map:HookScript("OnHide",function() Stop(); self:FinishResize(); self.extraZoomScale=nil end)
     map:HookScript("OnShow",function()
-        C_Timer.After(0,function() if map:IsShown() then self:Refresh() end end)
+        C_Timer.After(0,function()
+            if map:IsShown() then
+                self:Refresh()
+                if self.foreverFrame then self:QueueForeverViewportRefresh() end
+            end
+        end)
     end)
     for _,method in ipairs({"Maximize","Minimize"}) do
         if type(map[method])=="function" then hooksecurefunc(map,method,function()

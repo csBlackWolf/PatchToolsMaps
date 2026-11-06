@@ -1,5 +1,7 @@
 # Developing PatchToolsMaps
 
+Both clients retain the extended zoom range. Forever has an unresolved combat-taint report: the live log identifies a tainted `targetScrollY` read during quest-pin acquisition, before blocked `SetPassThroughButtons`. This establishes the propagation path, not the original writer. Sidebar layout uses the native `OnCanvasSizeChanged` reset without custom pan arguments while this is investigated. `/ptmaps taint` toggles an in-memory, bounded ownership trace; `/ptmaps status` prints transitions. It does not write to native scroll fields or suppress marker updates. Automated interaction checks cannot prove absence of engine taint; verify in a fresh client session.
+
 PatchToolsMaps owns its map settings and registers them with PatchTools extension API 1, available since PatchTools 0.7.0. Check the API before registering; an incompatible base should receive an explanatory message without attaching map hooks. See the [user guide](GUIDE.md) for installation and controls.
 
 ## Runtime responsibilities

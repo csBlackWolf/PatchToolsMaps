@@ -1,3 +1,12 @@
+# 0.3.2
+
+- Improved Forever map proportions with the quest sidebar expanded or collapsed.
+- Rebuilds the map viewport after opening and sidebar changes to reduce stale zoom and offset issues.
+- Keeps the full extended zoom range available on both supported clients.
+- Added optional scroll-state diagnostics: `/ptmaps taint` toggles tracing and `/ptmaps status` prints the result.
+
+The reported Forever combat-layout and quest-marker taint issues remain under investigation. This release does not claim a confirmed fix for every combat case.
+
 # PatchToolsMaps 0.3.1 — 2026-11-05
 
 - Bring the modern map frame to Forever, including movement, resizing and the classic-frame option.

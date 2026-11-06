@@ -11,11 +11,44 @@ function Maps:CanUseMapInCombat()
     return true
 end
 
+-- Inspect ownership only; never repair or overwrite Blizzard state here.
+function Maps:CaptureScrollSecurity(stage)
+    if not self.scrollSecurityEnabled or type(issecurevariable)~="function" then return end
+    local scroll=self.map and self.map.ScrollContainer
+    if not scroll then return end
+    local unsafe={}
+    for _,key in ipairs({"currentScale","targetScale","currentScrollX","currentScrollY","targetScrollX","targetScrollY","zoomLevels"}) do
+        local secure,owner=issecurevariable(scroll,key)
+        if not secure then unsafe[#unsafe+1]=key.." ("..tostring(owner or "?")..")" end
+    end
+    local state=#unsafe>0 and table.concat(unsafe,", ") or "secure"
+    local rows=self.scrollSecurityRows or {}
+    self.scrollSecurityRows=rows
+    if state~=self.scrollSecurityLast then
+        self.scrollSecurityLast=state
+        if #rows<24 then rows[#rows+1]=stage..": "..state end
+    end
+end
+
+function Maps:ToggleScrollSecurity()
+    self.scrollSecurityEnabled=not self.scrollSecurityEnabled
+    self.scrollSecurityRows={}; self.scrollSecurityLast=nil
+    self:CaptureScrollSecurity("enabled")
+    PatchTools:Print("Maps scroll diagnosis: "..(self.scrollSecurityEnabled and "on" or "off"))
+end
+
 function Maps:CallMapFunction(fn,...)
     -- securecallfunction does not grant combat permission. Call ordinary map
     -- operations directly only after checking the actual frame protection.
     if InCombatLockdown and InCombatLockdown() then return fn(...) end
-    if securecallfunction then return securecallfunction(fn,...) end
+    if securecallfunction then
+        self:CaptureScrollSecurity("before native operation")
+        local function After(...)
+            self:CaptureScrollSecurity("after native operation")
+            return ...
+        end
+        return After(securecallfunction(fn,...))
+    end
     return fn(...)
 end
 
@@ -33,6 +66,7 @@ function Maps:InstallZoom(scroll)
     -- XML already holds the original method as its event handler. Hook the
     -- actual script so hardware wheel events reach us on every map type.
     scroll:HookScript("OnMouseWheel", function(_, delta)
+        self:CaptureScrollSecurity("wheel entry")
         local diagnostic=self.zoomDiagnostics
         diagnostic.calls=diagnostic.calls+1
         diagnostic.delta=delta
@@ -92,6 +126,7 @@ function Maps:PrintZoomStatus()
         local ok,value=pcall(scroll[method],scroll)
         return ok and tostring(value) or "?"
     end
+    for _,row in ipairs(self.scrollSecurityRows or {}) do PT:Print(row) end
     PT:Print("Maps "..self.version.."; extra="..tostring(self.db.extendedZoom)
         .."; combat="..tostring(InCombatLockdown and InCombatLockdown() or false)
         .."; wheel="..Read("IsMouseWheelEnabled"))
@@ -100,6 +135,11 @@ function Maps:PrintZoomStatus()
         .."; max="..(ready and Read("GetScaleForMaxZoom") or "?")
         .."; nativeTarget="..tostring(scroll and scroll.targetScale)
         .."; mode="..tostring(scroll and scroll.mouseWheelZoomMode))
+    if scroll then
+        PT:Print("Window="..tostring(self.map:GetWidth()).."x"..tostring(self.map:GetHeight())
+            .."; viewport="..tostring(scroll:GetWidth()).."x"..tostring(scroll:GetHeight())
+            .."; protected="..tostring(self.map:IsProtected()).."/"..tostring(scroll:IsProtected()))
+    end
     PT:Print("Wheel events="..tostring(diagnostic.calls or 0).."; result="..tostring(diagnostic.reason)
         .."; delta="..tostring(diagnostic.delta).."; target="..tostring(diagnostic.target)
         .."; after="..tostring(diagnostic.after))

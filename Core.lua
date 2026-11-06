@@ -11,6 +11,10 @@ function Maps:Refresh(rebuildZoom)
     if self.resetPending then self:ResetWindow() else self:ApplyWindow() end
     if InCombatLockdown and InCombatLockdown() then self:RestoreCombatWindow(); self:RestoreCombatFrame() end
     self:ApplyMapOpacity()
+    if self.foreverFrame and self.foreverFrame.viewportDirty and not (InCombatLockdown and InCombatLockdown()) then
+        self.foreverFrame.viewportDirty=nil
+        self:QueueForeverViewportRefresh()
+    end
     if self.zoomPending and not (InCombatLockdown and InCombatLockdown()) and self.map:IsShown()
         and self.map.ScrollContainer and type(self.map.ScrollContainer.zoomLevels)=="table"
         and #self.map.ScrollContainer.zoomLevels>0 then
@@ -20,7 +24,10 @@ function Maps:Refresh(rebuildZoom)
         and self:GetReadyLayerIndex() then
         local scroll=self.map.ScrollContainer
         if scroll and type(scroll.ResetZoom)=="function" then
-            if securecallfunction then securecallfunction(scroll.ResetZoom,scroll,true)
+            if PatchTools and PatchTools.isForever and type(scroll.OnCanvasSizeChanged)=="function" then
+                -- Let native code choose its reset parameters on Forever.
+                self:CallMapFunction(scroll.OnCanvasSizeChanged,scroll)
+            elseif securecallfunction then securecallfunction(scroll.ResetZoom,scroll,true)
             else scroll:ResetZoom(true) end
             self.resetViewPending=nil
         end
@@ -107,6 +114,8 @@ function Maps:Initialize()
             if (message or ""):lower():match("^%s*debug%s*$") then
                 if PT.OpenDebugReport then PT:OpenDebugReport()
                 else PT:Print(PT.locale=="deDE" and "Für den Diagnosebericht bitte PatchTools aktualisieren." or "Update PatchTools to use the diagnostic report.") end
+            elseif (message or ""):lower():match("^%s*taint%s*$") then
+                self:ToggleScrollSecurity()
             elseif (message or ""):lower():match("^%s*status%s*$") then
                 self:PrintZoomStatus()
             elseif (message or ""):lower():match("^%s*reset%s*$") then

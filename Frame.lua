@@ -30,7 +30,13 @@ function Maps:GetCustomFrameHeight(width)
     end
     -- Keep the viewport in the map art's aspect ratio. A fixed outer-window
     -- ratio plus fixed toolbar heights creates a growing letterbox at fit zoom.
-    return (width-left+right)*ratio-top+bottom
+    local questWidth,navHeight=0,0
+    if self.foreverFrame then
+        local quest=self.map.QuestLog
+        questWidth=quest and quest:IsShown() and self.map.questLogWidth or 0
+        navHeight=28
+    end
+    return math.max(1,width-left+right-questWidth)*ratio-top+bottom+navHeight
 end
 
 local function Allowed(frame)

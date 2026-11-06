@@ -47,9 +47,33 @@ function Maps:InstallForeverFrame(map)
     -- anchors, including when only the quest-log side panel is toggled.
     if type(map.UpdateSpacerFrameAnchoring)=="function" then
         hooksecurefunc(map,"UpdateSpacerFrameAnchoring",function()
-            if not self.layingOutFrame then self:Refresh() end
+            if not self.layingOutFrame then
+                self:Refresh()
+                self:QueueForeverViewportRefresh()
+            end
         end)
     end
+end
+
+function Maps:QueueForeverViewportRefresh()
+    local native=self.foreverFrame
+    if native.viewportPending then return end
+    native.viewportPending=true
+    C_Timer.After(0,function()
+        if not self:UseCustomFrame() or not self.map:IsShown() then native.viewportPending=nil; return end
+        if InCombatLockdown and InCombatLockdown() then native.viewportPending=nil; native.viewportDirty=true; return end
+        -- Native sidebar changes rebuild against the native spacers before our
+        -- anchors are restored. Recompute fit and pan once the final layout is
+        -- in place, without a full map rebuild or provider reset.
+        self:Refresh()
+        if self:GetReadyLayerIndex() then
+            -- Rebuild against the final viewport rather than stale native
+            -- dimensions. Keep pan/fit calculation inside the native method.
+            local scroll=self.map.ScrollContainer
+            self:CallMapFunction(scroll.OnCanvasSizeChanged,scroll)
+        end
+        native.viewportPending=nil
+    end)
 end
 
 function Maps:LayoutForeverFrame(enabled)

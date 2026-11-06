@@ -1,3 +1,11 @@
+# PatchToolsMaps 0.3.3 — 2026-11-06
+
+- Restore semi-transparent fog and full reveal on Forever build 70790, including Duskwood.
+- Add map data verified against the current Blizzard client while preserving support for the previously covered builds.
+- Keep actual exploration progress unchanged.
+
+Validation: all automated integration and catalog checks pass. Duskwood reveal modes were confirmed in the live Forever client. The previously reported combat-layout and quest-marker taint cases remain under investigation.
+
 # 0.3.2
 
 - Improved Forever map proportions with the quest sidebar expanded or collapsed.

@@ -53,3 +53,9 @@ Do not label this as in-game verified until the map modes, exploration updates a
 The Era input uses the five tables needed for catalog geometry (UiMap is not used). Set MAPEXTRACT_LOCALE=deDE for the installed German content; the default enUS locale can select files that are not installed. Extraction remains local-only. An optional required-textures.json array limits header verification to accepted catalog IDs.
 
 Generate into a separate output directory with --build 70003 --skip-invalid-texture-geometry, then keep its Lua as GeneratedCatalogEra.lua and manifest as CATALOG-MANIFEST-ERA.json alongside the existing Forever files. The explicit skip flag quarantines one Era overlay (art 1264) whose declared bottom row is 33 pixels but whose two images are only 32 pixels high. Missing headers still fail generation. Catalog result: 525 overlays, 41 map arts, 808 verified textures, 42 size overrides. No third-party addon data or game images are included.
+
+## Forever 70790
+
+The installed product is now `wowf` (version 1.60.1.70790), rather than the former `wow_classic_beta`. Export with `MAPEXTRACT_LOCALE=deDE`, the current `.build.info` configuration and the existing six-table extract list. If TACTSharp has loaded the root but the optional executable install manifest is missing locally, the exporter continues; every required table and texture must still be readable locally.
+
+Generate into a separate output directory with `--build 70790`. Keep the resulting files as `GeneratedCatalogForever70790.lua` and `CATALOG-MANIFEST-FOREVER-70790.json`, preserving older verified builds. The catalog contains 572 overlays across 45 map arts, with 972 used textures and 19 dimension overrides. Duskwood (UiMap 1431) maps to art 2152. A new build needs its own verified catalog; geometry equality alone is not permission to bypass the exact-build check.

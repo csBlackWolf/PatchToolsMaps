@@ -249,7 +249,7 @@ PT:SelectOptionsPage('general')
 assert(PT:SelectOptionsPage('missing')==false and PT.optionPages.general:IsShown())
 PatchToolsMapsDB={customFrame=false,foreverFrameAvailable=true,scale=1,x=.2,y=.8}
 local Maps={}
-for _,name in ipairs({'Locales.lua','OverlayData.lua','GeneratedCatalog.lua','GeneratedCatalogEra.lua','GeneratedCatalogEra70576.lua','Reveal.lua','Zoom.lua','Nova.lua','Opacity.lua','Forever.lua','Frame.lua','Actions.lua','Window.lua','Options.lua','Core.lua'}) do
+for _,name in ipairs({'Locales.lua','OverlayData.lua','GeneratedCatalog.lua','GeneratedCatalogForever70790.lua','GeneratedCatalogEra.lua','GeneratedCatalogEra70576.lua','Reveal.lua','Zoom.lua','Nova.lua','Opacity.lua','Forever.lua','Frame.lua','Actions.lua','Window.lua','Options.lua','Core.lua'}) do
     assert(loadfile(MAPS_PATH..name))('PatchToolsMaps',Maps)
 end
 Event('ADDON_LOADED','PatchToolsMaps')
@@ -496,6 +496,21 @@ if era then
     local fw,fh=Maps:TextureSize(id,1,1)
     assert(fw==size[1] and fh==size[2],'current client texture edge dimensions must be preserved')
     Maps.db.mode='mist'
+end
+if not era then
+    GetBuildInfo=function() return '1.60.1','70790','',16001 end
+    artID=2152 -- Duskwood / UiMap 1431, from the current client export.
+    explored={}; Maps.db.knownOverlays={}
+    assert(#Maps:GetCatalog(artID,1,layer)>0,'Forever 70790 needs a verified Duskwood catalog')
+    for _,mode in ipairs({'classic','mist','full'}) do
+        Maps.db.mode=mode; Maps:RefreshReveal()
+        if mode=='classic' then assert(not Maps.textures[1]:IsShown())
+        else assert(Maps.textures[1]:IsShown() and Maps.textures[1].alpha==(mode=='mist' and .5 or 1)) end
+    end
+    local id,size=next(Maps.catalogTextureSizes[70790])
+    local fw,fh=Maps:TextureSize(id,1,1)
+    assert(fw==size[1] and fh==size[2])
+    Maps.db.mode='mist'; artID=fixtureArt
 end
 function GetBuildInfo() return '1.60.1','99999','',16001 end
 assert(#Maps:GetCatalog(fixtureArt,1,layer)==0)

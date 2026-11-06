@@ -21,7 +21,13 @@ if(args.Length>1 && (args[1]=="extract" || args[1]=="verify-textures")) {
     build.Settings.ListfileFallback=false;
     build.Settings.CacheDir=Path.Combine(folder,"cache");
     build.LoadConfigs(config[Array.IndexOf(fields,"Build Key")],config[Array.IndexOf(fields,"CDN Key")]);
-    build.Load();
+    try { build.Load(); }
+    catch(FileNotFoundException) when(build.Root != null) {
+        // Map extraction needs the loaded root and encoding, not the executable
+        // install manifest read last by TACTSharp. Individual reads still fail
+        // normally if a required table or texture is unavailable locally.
+        Console.WriteLine("Install manifest unavailable; continuing with loaded map-data root.");
+    }
     File.WriteAllText(Path.Combine(folder,"extraction-meta.json"),JsonSerializer.Serialize(new {
         version=clientVersion,product,buildConfig=config[Array.IndexOf(fields,"Build Key")],
         cdnConfig=config[Array.IndexOf(fields,"CDN Key")],locale=build.Settings.Locale.ToString(),localOnly=true

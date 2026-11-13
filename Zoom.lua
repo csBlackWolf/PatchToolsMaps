@@ -1,8 +1,31 @@
 local _, Maps = ...
 
+-- Forever's native zoom fields are also consumed by protected quest pins.
+-- Even out-of-combat addon pan calls can contaminate later combat updates.
+-- Experimental Forever zoom requires the deferred marker input guard.
+function Maps:ClearExtraZoom()
+    self.extraZoomScale=nil
+end
+
+function Maps:CaptureViewportInputs(stage)
+    if type(issecurevariable)~="function" then return end
+    local scroll=self.map and self.map.ScrollContainer
+    if not scroll then return end
+    local rows=self.viewportInputRows or {}
+    self.viewportInputRows=rows
+    if #rows>=2 then return end
+    local fields={}
+    for _,key in ipairs({"mapID","baseScale","GetWidth","GetHeight","CreateZoomLevels",
+        "OnCanvasSizeChanged","ResetZoom","InstantPanAndZoom"}) do
+        local secure,owner=issecurevariable(scroll,key)
+        fields[#fields+1]=key.."="..(secure and "secure" or tostring(owner or "unsafe"))
+    end
+    rows[#rows+1]=stage.." inputs: "..table.concat(fields,", ")
+end
+
 function Maps:CanUseMapInCombat()
     if not (InCombatLockdown and InCombatLockdown()) then return true end
-    if not (PatchTools and PatchTools.isClassicEra) or not self.map then return false end
+    if not self.map or not (PatchTools and (PatchTools.isClassicEra or (PatchTools.isForever and self.pinInputGuard))) then return false end
     -- Switching the whole frame style still waits until combat ends.
     if self.customFrame and (self.customControlsPlaced==true)~=(self:UseCustomFrame()==true) then return false end
     for _,frame in ipairs({self.map,self.map.ScrollContainer,self.map:GetCanvas()}) do
@@ -13,7 +36,7 @@ end
 
 -- Inspect ownership only; never repair or overwrite Blizzard state here.
 function Maps:CaptureScrollSecurity(stage)
-    if not self.scrollSecurityEnabled or type(issecurevariable)~="function" then return end
+    if not (self.scrollSecurityEnabled or self.scrollSecurityStartup) or type(issecurevariable)~="function" then return end
     local scroll=self.map and self.map.ScrollContainer
     if not scroll then return end
     local unsafe={}
@@ -27,14 +50,51 @@ function Maps:CaptureScrollSecurity(stage)
     if state~=self.scrollSecurityLast then
         self.scrollSecurityLast=state
         if #rows<24 then rows[#rows+1]=stage..": "..state end
+        if #unsafe>0 and not self.scrollSecurityOrigin and type(debugstack)=="function" then
+            -- Record the first observed transition's caller chain, not a claim
+            -- that this post-hook is the original taint write.
+            self.scrollSecurityOrigin={stage=stage,stack=debugstack(3,12,0)}
+        end
     end
+end
+
+function Maps:StartScrollSecurity()
+    -- Capture from attachment, before our first layout. This is a bounded,
+    -- read-only history; it does not print or write native canvas fields.
+    if self.scrollSecurityStarted then return end
+    self.scrollSecurityStarted=true
+    self.scrollSecurityStartup=true
+    self:InstallScrollSecurityHooks(self.map and self.map.ScrollContainer)
+    self:CaptureScrollSecurity("before addon setup")
+    self:CaptureViewportInputs("before addon setup")
 end
 
 function Maps:ToggleScrollSecurity()
     self.scrollSecurityEnabled=not self.scrollSecurityEnabled
-    self.scrollSecurityRows={}; self.scrollSecurityLast=nil
+    -- Keep the startup evidence when the user first enables diagnosis.
+    if not self.scrollSecurityStartup and self.scrollSecurityEnabled then
+        self.scrollSecurityRows={}; self.scrollSecurityLast=nil
+        self.scrollSecurityOrigin=nil
+    end
+    self.scrollSecurityStartup=nil
     self:CaptureScrollSecurity("enabled")
     PatchTools:Print("Maps scroll diagnosis: "..(self.scrollSecurityEnabled and "on" or "off"))
+end
+
+function Maps:BuildScrollSecurityOrigin()
+    local origin=self.scrollSecurityOrigin
+    if not origin then return "Maps: no unsafe transition captured yet." end
+    return "First observed transition: "..origin.stage.."\n"..origin.stack
+end
+
+function Maps:ShowDiagnosticText(text)
+    local PT=PatchTools
+    if PT.copyReportAPI and PT.OpenDebugReport then PT:OpenDebugReport(text)
+    else for line in text:gmatch("[^\r\n]+") do PT:Print(line) end end
+end
+
+function Maps:PrintScrollSecurityOrigin()
+    self:ShowDiagnosticText(self:BuildScrollSecurityOrigin())
 end
 
 function Maps:CallMapFunction(fn,...)
@@ -52,14 +112,33 @@ function Maps:CallMapFunction(fn,...)
     return fn(...)
 end
 
+-- These post-hooks observe transitions only. They neither repair native
+-- state nor prove which earlier statement first wrote a tainted value.
+function Maps:InstallScrollSecurityHooks(scroll)
+    if not scroll or type(hooksecurefunc)~="function" then return end
+    self.scrollSecurityHooks=self.scrollSecurityHooks or {}
+    local installed=self.scrollSecurityHooks[scroll]
+    if not installed then installed={}; self.scrollSecurityHooks[scroll]=installed end
+    for _,method in ipairs({"CreateZoomLevels","ResetZoom","InstantPanAndZoom","OnCanvasSizeChanged"}) do
+        if not installed[method] and type(scroll[method])=="function" then
+            local stage="after native "..method
+            hooksecurefunc(scroll,method,function()
+                self:CaptureScrollSecurity(stage)
+            end)
+            installed[method]=true
+        end
+    end
+end
+
 function Maps:InstallZoom(scroll)
     if not scroll or type(scroll.OnMouseWheel) ~= "function"
         or type(scroll.InstantPanAndZoom) ~= "function" then return end
+    self:InstallScrollSecurityHooks(scroll)
     self.zoomDiagnostics={calls=0,reason="ready"}
     -- Registering a script alone does not guarantee the frame receives wheels.
     scroll:EnableMouseWheel(true)
     scroll:HookScript("OnMouseUp",function(_,button)
-        if button=="RightButton" then self.extraZoomScale=nil end
+        if button=="RightButton" then self:ClearExtraZoom() end
     end)
     -- Use the native pan/zoom operation; never replace methods or extend the
     -- zoomLevels table shared with protected map pins.
@@ -70,8 +149,15 @@ function Maps:InstallZoom(scroll)
         local diagnostic=self.zoomDiagnostics
         diagnostic.calls=diagnostic.calls+1
         diagnostic.delta=delta
+        if PatchTools and PatchTools.isForever and not self.pinInputGuard then
+            diagnostic.reason="native-only"
+            diagnostic.target,diagnostic.after=nil,nil
+            return
+        end
         if not self.db.extendedZoom then diagnostic.reason="disabled"; return end
-        if not self:CanUseMapInCombat() then diagnostic.reason="combat-protected"; return end
+        local foreverZoom=PatchTools and PatchTools.isForever and self.pinInputGuard
+            and not self.map:IsProtected() and not scroll:IsProtected()
+        if not self:CanUseMapInCombat() and not foreverZoom then diagnostic.reason="combat-protected"; return end
         if type(delta)~="number" or delta==0 then diagnostic.reason="invalid-delta"; return end
         if type(scroll.zoomLevels)~="table" or #scroll.zoomLevels==0 then diagnostic.reason="no-levels"; return end
         local maximum = scroll:GetScaleForMaxZoom()
@@ -111,13 +197,14 @@ function Maps:InstallZoom(scroll)
 end
 
 function Maps:ZoomSettingsChanged()
-    self.extraZoomScale = nil
+    self:ClearExtraZoom()
     if not self.db.extendedZoom then self.resetViewPending = true end
     self:Refresh()
 end
 
-function Maps:PrintZoomStatus()
-    local PT=PatchTools
+function Maps:BuildZoomStatus()
+    local lines={}
+    local function Add(text) lines[#lines+1]=text end
     local scroll=self.map and self.map.ScrollContainer
     local diagnostic=self.zoomDiagnostics or {}
     local ready=scroll and type(scroll.zoomLevels)=="table" and #scroll.zoomLevels>0
@@ -126,21 +213,31 @@ function Maps:PrintZoomStatus()
         local ok,value=pcall(scroll[method],scroll)
         return ok and tostring(value) or "?"
     end
-    for _,row in ipairs(self.scrollSecurityRows or {}) do PT:Print(row) end
-    PT:Print("Maps "..self.version.."; extra="..tostring(self.db.extendedZoom)
+    for _,row in ipairs(self.scrollSecurityRows or {}) do Add(row) end
+    for _,row in ipairs(self.viewportInputRows or {}) do Add(row) end
+    Add("Maps "..self.version.."; extra="..tostring(self.db.extendedZoom)
         .."; combat="..tostring(InCombatLockdown and InCombatLockdown() or false)
         .."; wheel="..Read("IsMouseWheelEnabled"))
-    PT:Print("Map="..tostring(self.map and self.map:GetMapID()).."; levels="..tostring(ready and #scroll.zoomLevels or 0)
+    Add("Native method barrier="..tostring(type(securecallmethod)=="function"))
+    Add("Deferred pin input="..tostring(self.pinInputGuard~=nil).."; pending="..tostring(self.pinInputGuard and self.pinInputGuard:PendingCount() or 0))
+    Add(self:BuildRevealStatus())
+    Add("Map="..tostring(self.map and self.map:GetMapID()).."; levels="..tostring(ready and #scroll.zoomLevels or 0)
         .."; scale="..(ready and Read("GetCanvasScale") or "?")
         .."; max="..(ready and Read("GetScaleForMaxZoom") or "?")
         .."; nativeTarget="..tostring(scroll and scroll.targetScale)
         .."; mode="..tostring(scroll and scroll.mouseWheelZoomMode))
     if scroll then
-        PT:Print("Window="..tostring(self.map:GetWidth()).."x"..tostring(self.map:GetHeight())
+        Add("Window="..tostring(self.map:GetWidth()).."x"..tostring(self.map:GetHeight())
             .."; viewport="..tostring(scroll:GetWidth()).."x"..tostring(scroll:GetHeight())
             .."; protected="..tostring(self.map:IsProtected()).."/"..tostring(scroll:IsProtected()))
     end
-    PT:Print("Wheel events="..tostring(diagnostic.calls or 0).."; result="..tostring(diagnostic.reason)
+    Add("Wheel events="..tostring(diagnostic.calls or 0).."; result="..tostring(diagnostic.reason)
         .."; delta="..tostring(diagnostic.delta).."; target="..tostring(diagnostic.target)
         .."; after="..tostring(diagnostic.after))
+    lines[#lines+1]=self:BuildScrollSecurityOrigin()
+    return table.concat(lines,"\n")
+end
+
+function Maps:PrintZoomStatus()
+    self:ShowDiagnosticText(self:BuildZoomStatus())
 end

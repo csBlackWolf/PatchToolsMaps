@@ -104,6 +104,7 @@ local function Widget(parent)
     function methods:IsMouseWheelEnabled() return self.wheelEnabled==true end
     function methods:GetEffectiveScale() return self.scale end
     function methods:GetFrameLevel() return self.frameLevel end
+    function methods:SetFrameLevel(value) self.frameLevel=value end
     function methods:GetLeft() return 100 end
     function methods:GetTop() return 700 end
     function methods:SetText(s) self.text=s end
@@ -210,12 +211,20 @@ function securecallfunction(fn,...)
     secureCalls=secureCalls+1
     return fn(...)
 end
+local secureMethodCalls=0
+function securecallmethod(object,method,...)
+    assert(not combat,'native method barrier does not grant combat permission')
+    secureMethodCalls=secureMethodCalls+1
+    local fn=rawget(object,method)
+    assert(type(fn)=='function','method barrier uses raw method lookup')
+    return fn(object,...)
+end
 function hooksecurefunc(object,key,fn)
     local original=object[key]
     object[key]=function(...)
-        local result={original(...)}
+        local result=table.pack(original(...))
         fn(...)
-        return unpack(result)
+        return table.unpack(result,1,result.n)
     end
 end
 C_Timer={After=function(_,fn) fn() end}
@@ -249,7 +258,7 @@ PT:SelectOptionsPage('general')
 assert(PT:SelectOptionsPage('missing')==false and PT.optionPages.general:IsShown())
 PatchToolsMapsDB={customFrame=false,foreverFrameAvailable=true,scale=1,x=.2,y=.8}
 local Maps={}
-for _,name in ipairs({'Locales.lua','OverlayData.lua','GeneratedCatalog.lua','GeneratedCatalogForever70790.lua','GeneratedCatalogEra.lua','GeneratedCatalogEra70576.lua','Reveal.lua','Zoom.lua','Nova.lua','Opacity.lua','Forever.lua','Frame.lua','Actions.lua','Window.lua','Options.lua','Core.lua'}) do
+for _,name in ipairs({'Locales.lua','OverlayData.lua','GeneratedCatalog.lua','GeneratedCatalogForever70790.lua','GeneratedCatalogEra.lua','GeneratedCatalogEra70576.lua','CatalogCompatibility.lua','Reveal.lua','DeferredPinInput.lua','CombatPins.lua','Zoom.lua','Nova.lua','Opacity.lua','Forever.lua','Frame.lua','Actions.lua','Window.lua','Options.lua','Core.lua'}) do
     assert(loadfile(MAPS_PATH..name))('PatchToolsMaps',Maps)
 end
 Event('ADDON_LOADED','PatchToolsMaps')
@@ -315,7 +324,9 @@ if era then
 end
 if not era then
     map.BorderFrame=Widget(map); map.BorderFrame:EnableMouse(true)
+    map.BorderFrame:SetFrameLevel(500)
     map.BorderFrame.MaximizeMinimizeFrame=Widget(map.BorderFrame)
+    map.BorderFrame.MaximizeMinimizeFrame:SetFrameLevel(501)
     map.TitleCanvasSpacerFrame=Widget(map)
     map.NavBar=Widget(map)
     local navArt=Widget(map.NavBar); navArt.objectType='Texture'
@@ -356,7 +367,12 @@ if not era then
     local body=Widget(details.ScrollFrame.Contents); body.objectType='FontString'; body:SetTextColor(.2,.13,.05,1)
     local title=Widget(details.ScrollFrame.Contents); title.objectType='FontString'; title.fontSize=18; title:SetTextColor(.2,.13,.05,1)
     details.ScrollFrame.Contents.regions={body,title}
-    function map:UpdateSpacerFrameAnchoring() end
+    function map:UpdateSpacerFrameAnchoring()
+        -- Match the native order: spacer anchors first, then canvas rebuild.
+        self.TitleCanvasSpacerFrame:SetPoint('BOTTOMRIGHT',self,'TOPRIGHT',
+            self.QuestLog:IsShown() and -336 or -3,-67)
+        self.ScrollContainer:OnCanvasSizeChanged()
+    end
 end
 map.maximized=false
 map:SetPoint('CENTER',UIParent,'CENTER',0,0)
@@ -390,12 +406,13 @@ function scroll:GetCurrentLayerIndex()
     return self.zoomLevels[index].layerIndex
 end
 local nativeZoomBuilds=0
+scroll.mapID=1440
 function scroll:GetScaleForMaxZoom() return self.zoomLevels[#self.zoomLevels].scale end
 function scroll:GetCanvasScale() return rawget(self,'currentScale') or 1 end
 function scroll:GetNormalizedHorizontalScroll() return .5 end
 function scroll:GetNormalizedVerticalScroll() return .5 end
 function scroll:InstantPanAndZoom(scale,x,y)
-    assert(not combat)
+    assert(not combat or (PatchToolsMaps.pinInputGuard and not self:IsProtected()))
     self.currentScale,self.panX,self.panY=scale,x,y
 end
 function scroll:OnMouseWheel(delta)
@@ -512,9 +529,80 @@ if not era then
     assert(fw==size[1] and fh==size[2])
     Maps.db.mode='mist'; artID=fixtureArt
 end
-function GetBuildInfo() return '1.60.1','99999','',16001 end
-assert(#Maps:GetCatalog(fixtureArt,1,layer)==0)
+if not era then
+    GetBuildInfo=function() return '1.60.1','70862','',16001 end
+    artID=2167 -- Ashenvale, UiMap 1440 in the verified 70862 export.
+    explored={}; Maps.db.knownOverlays={}
+    assert(Maps:GetCatalogBuild()==70790,'verified compatible build uses the canonical dataset')
+    assert(#Maps:GetCatalog(artID,1,layer)>0)
+    for _,mode in ipairs({'classic','mist','full'}) do
+        Maps.db.mode=mode; Maps:RefreshReveal()
+        if mode=='classic' then assert(not Maps.textures[1]:IsShown())
+        else assert(Maps.textures[1]:IsShown() and Maps.textures[1].alpha==(mode=='mist' and .5 or 1)) end
+    end
+    local id,size=next(Maps.catalogTextureSizes[70790])
+    local fw,fh=Maps:TextureSize(id,1,1)
+    assert(fw==size[1] and fh==size[2],'compatible build must use the same narrow-texture sizes')
+    Maps.db.mode='mist'; artID=fixtureArt
+end
+if not era then
+    for _,verifiedBuild in ipairs({'70888','70938'}) do
+    GetBuildInfo=function() return '1.60.1',verifiedBuild,'',16001 end
+    artID=2165 -- Westfall in the independently verified client export.
+    explored={}; Maps.db.knownOverlays={}; Maps.db.mode='mist'
+    assert(Maps:GetCatalogBuild()==70790 and #Maps:GetCatalog(artID,1,layer)==14)
+    Maps:RefreshReveal()
+    assert(Maps.textures[1]:IsShown() and Maps.textures[1].alpha==.5,
+        'Westfall on build 70888 renders missing exploration at half opacity')
+    assert(Maps:BuildRevealStatus():find('catalog=14',1,true),'status reports Westfall coverage')
+    artID=fixtureArt
+    end
+end
+-- Future client patches retain the last bundled preview, even before a release.
+for _,futureBuild in ipairs({'70939','71001','99999'}) do
+    GetBuildInfo=function() return era and '1.15.9' or '1.60.1',futureBuild,'',era and 11509 or 16001 end
+    local expected=era and 70576 or 70790
+    assert(select('#',Maps:GetCatalogBuild())==1 and Maps:GetCatalogBuild()==expected)
+    local selected,source=Maps:GetCatalogSelection()
+    assert(selected==expected and source=='fallback')
+    assert(Maps:BuildRevealStatus():find('catalogSource=fallback',1,true))
+    for mapArt,artLayers in pairs(Maps.catalog[expected]) do
+        for geometry,entries in pairs(artLayers) do
+            local index,lw,lh,tw,th=geometry:match('^(%d+):(%d+):(%d+):(%d+):(%d+)$')
+            local shape={layerWidth=tonumber(lw),layerHeight=tonumber(lh),tileWidth=tonumber(tw),tileHeight=tonumber(th)}
+            assert(Maps:GetCatalog(mapArt,tonumber(index),shape)==entries,'every bundled map survives a future patch')
+        end
+    end
+    explored={}; Maps.db.knownOverlays={}; artID=fixtureArt
+    for _,mode in ipairs({'mist','full','classic'}) do
+        Maps.db.mode=mode; Maps:RefreshReveal()
+        assert(Maps.textures[1]:IsShown()==(mode~='classic'))
+        if mode~='classic' then assert(Maps.textures[1].alpha==(mode=='mist' and .5 or 1)) end
+    end
+    assert(#Maps:GetCatalog(fixtureArt,2,layer)==0,'different layers cannot reuse mismatched data')
+    local changed={layerWidth=1003,layerHeight=668,tileWidth=256,tileHeight=256}
+    assert(#Maps:GetCatalog(fixtureArt,1,changed)==0,'changed geometry is isolated to its map')
+    assert(#Maps:GetCatalog(-999,1,layer)==0,'unknown art never borrows another map')
+    local id,size=next(Maps.catalogTextureSizes[expected])
+    local w,h=Maps:TextureSize(id,1,1)
+    assert(w==size[1] and h==size[2],'fallback preserves narrow-edge texture dimensions')
+    Maps:UpdateOptions()
+    assert(Maps.optionsUI.status.text==Maps:T('CATALOG_FALLBACK',futureBuild))
+end
+-- Even an exact build belonging to the other product must never select its data.
+GetBuildInfo=function() return 'test',tostring(era and 70790 or 70576),'',0 end
+assert(Maps:GetCatalogBuild()==(era and 70576 or 70790))
+local family=Maps.catalogProductBuilds[era and 'era' or 'forever']
+local savedCatalogs={}
+for _,id in ipairs(family) do savedCatalogs[id]=Maps.catalog[id]; Maps.catalog[id]=nil end
+assert(Maps:GetCatalogBuild()==nil and select('#',Maps:GetCatalogBuild())==1)
+assert(Maps:BuildRevealStatus():find('catalogBuild=nil',1,true))
+Maps:UpdateOptions()
+assert(Maps.optionsUI.status.text==Maps:T('CATALOG_MISSING',tostring(era and 70790 or 70576)))
+for id,entries in pairs(savedCatalogs) do Maps.catalog[id]=entries end
+Maps.db.mode='mist'
 GetBuildInfo=savedBuild
+Maps:UpdateOptions()
 if era then
     local id,size=next(Maps.catalogTextureSizes[70003])
     local fw,fh=Maps:TextureSize(id,1,1)
@@ -558,17 +646,26 @@ Maps.db.extendedZoom=true; Maps.windowDB.scale=1.4; Maps.windowDB.x=.4; Maps.win
 Maps:Refresh(true); scroll.currentScale=4; scroll.panX,scroll.panY=.9,.1
 Maps.optionsUI.reset.scripts.OnClick()
 assert(not map:IsShown() and panelCloses==1)
-assert(secureCalls>=2)
+if era then assert(secureCalls>=2) end
 assert(map.scale==1 and Maps.windowDB.x==nil and Maps.windowDB.y==nil and Maps.db.extendedZoom)
-assert(#scroll.zoomLevels==2 and scroll.currentScale==1 and scroll.panX==.5 and scroll.panY==.5)
-assert(Maps.optionsUI.checks.extendedZoom.checked==true)
+if era then assert(#scroll.zoomLevels==2 and scroll.currentScale==1 and scroll.panX==.5 and scroll.panY==.5) end
+assert(Maps.optionsUI.checks.extendedZoom.checked==era)
+if not era then
+    assert(Maps.optionsUI.checks.extendedZoom.enabled==false and Maps.db.extendedZoom,
+        'temporary native-only UI preserves saved extended zoom preference')
+end
 map:Show()
+if not era then
+    map:UpdateSpacerFrameAnchoring()
+    assert(#scroll.zoomLevels==2 and scroll.currentScale==1 and scroll.panX==.5 and scroll.panY==.5,
+        'Forever reset is applied by the next native open flow')
+end
 local resets=scroll.resets
 map.protected=true; combat=true; Maps.db.extendedZoom=true; Maps.windowDB.scale=1.2
 Maps:ResetMap(); assert(scroll.resets==resets and Maps.resetViewPending and Maps.resetPending)
 assert(map:IsShown() and panelCloses==1) -- protected UI close waits for combat to end
 map.protected=nil; combat=false; Event('PLAYER_REGEN_ENABLED')
-assert(scroll.resets==resets+1 and not Maps.resetViewPending and not Maps.resetPending)
+assert(scroll.resets==resets+(era and 1 or 0) and not Maps.resetViewPending and not Maps.resetPending)
 assert(not map:IsShown() and panelCloses==2)
 map:Show()
 map:Maximize(); Maps:ResetMap(); assert(Maps.resetViewPending and Maps.resetPending)
@@ -607,6 +704,7 @@ assert(Maps.windowDB.x<0 and Maps.windowDB.y>1)
 Maps.dragBar.scripts.OnDragStop()
 Maps.db.extendedZoom=true; Maps.extraZoomScale=nil; scroll.currentScale=2
 local levels=scroll.zoomLevels
+if era then
 Wheel(1)
 assert(scroll.currentScale==2.5 and Maps.extraZoomScale==2.5)
 Wheel(1); assert(scroll.currentScale==3.125)
@@ -614,6 +712,12 @@ Wheel(-1); assert(scroll.currentScale==2.5)
 Wheel(-1); assert(scroll.currentScale==2 and Maps.extraZoomScale==2)
 for i=1,20 do Wheel(1) end
 assert(scroll.currentScale==8 and scroll.zoomLevels==levels and #levels==2)
+
+else
+    Wheel(1); assert(scroll.currentScale==2 and not Maps.extraZoomScale)
+    Wheel(-1); assert(scroll.currentScale==1 and Maps.zoomDiagnostics.reason=='native-only')
+    assert(scroll.zoomLevels==levels)
+end
 
 scroll.currentScale=2
 map.protected=true; combat=true; local secureBefore=secureCalls
@@ -632,12 +736,17 @@ for _,overview in ipairs({'world','continent'}) do
     scroll.zoomLevels=setmetatable({{scale=.75,layerIndex=1}},
         {__newindex=function() error('native overview zoom levels must remain untouched') end})
     scroll.currentScale=.75; Maps.extraZoomScale=nil; Maps.db.extendedZoom=true
+    if era then
     Wheel(1); assert(scroll.currentScale==.9375)
     Wheel(1); assert(scroll.currentScale==1.171875)
     Wheel(-1); Wheel(-1); assert(scroll.currentScale==.75 and not Maps.extraZoomScale)
     local original=scroll.zoomLevels
     for i=1,20 do Wheel(1) end
     assert(scroll.currentScale==3 and scroll.zoomLevels==original and #original==1)
+    else
+        Wheel(1); Wheel(-1)
+        assert(scroll.currentScale==.75 and not Maps.extraZoomScale)
+    end
     scroll.scripts.OnMouseUp(scroll,'RightButton'); assert(not Maps.extraZoomScale)
     Maps.db.extendedZoom=false; scroll.currentScale=.75
     Wheel(1); assert(scroll.currentScale==.75)
@@ -648,7 +757,20 @@ end
 scroll.overview=nil; scroll.zoomLevels=levels
 assert(scroll:IsMouseWheelEnabled() and Maps.zoomDiagnostics.calls>0)
 SlashCmdList.PATCHTOOLSMAPS('status')
-assert(PT.lastMessage:find('Wheel events=',1,true))
+assert(Maps:BuildZoomStatus():find('Wheel events=',1,true))
+do
+    local api,open=PT.copyReportAPI,PT.OpenDebugReport
+    local copied
+    PT.copyReportAPI=1; PT.OpenDebugReport=function(_,text) copied=text end
+    SlashCmdList.PATCHTOOLSMAPS('status')
+    assert(type(copied)=='string' and copied:find('Wheel events=',1,true)
+        and copied:find('Native method barrier=',1,true),'status opens the complete copyable text')
+    SlashCmdList.PATCHTOOLSMAPS('trace')
+    assert(copied==Maps:BuildScrollSecurityOrigin(),'trace uses the same copy window')
+    assert(PT.diagnosticProviders.PatchToolsMaps():find('Wheel events=',1,true),
+        'main report includes Maps diagnostics')
+    PT.copyReportAPI,PT.OpenDebugReport=api,open
+end
 local debugCalls=0
 PT.OpenDebugReport=function() debugCalls=debugCalls+1 end
 SlashCmdList.PATCHTOOLSMAPS(' debug '); assert(debugCalls==1)
@@ -671,6 +793,7 @@ scroll.zoomLevels={
 }
 scroll.currentScale=.57842313536926
 Maps.extraZoomScale=nil; Maps.db.extendedZoom=true
+if era then
 Wheel(1)
 assert(scroll.currentScale>.57842313536926,'enabled zoom must advance below the native maximum')
 local first=scroll.currentScale
@@ -678,6 +801,9 @@ Wheel(1); assert(scroll.currentScale>first)
 Wheel(-1); assert(math.abs(scroll.currentScale-first)<.00001)
 for i=1,20 do Wheel(-1) end
 assert(math.abs(scroll.currentScale-.57842313536926)<.00001)
+else
+    Wheel(1); assert(scroll.currentScale==.57842313536926 and not Maps.extraZoomScale)
+end
 scroll.overview=nil
 print('PASS: live-reported four-level map zoom advances from minimum even when native wheel zoom is stalled.')
 -- Reopening with an off-screen saved position must not sanitize it back on-screen.
@@ -1065,19 +1191,34 @@ else
     assert(Maps.windowDB.x~=beforeX,'modern Forever title supports dragging')
     local rebuilds=0
     local createZoom=scroll.CreateZoomLevels
-    scroll.CreateZoomLevels=function(self) rebuilds=rebuilds+1; createZoom(self) end
+    scroll.CreateZoomLevels=function(self)
+        rebuilds=rebuilds+1
+        local a,b=self.points[1],self.points[2]
+        local width=map:GetWidth()-a[4]+b[4]
+        local height=map:GetHeight()+a[5]-b[5]
+        assert(math.abs(height/width-artRatio)<.00001,
+            'native rebuild must already see the final custom viewport ratio')
+        createZoom(self)
+    end
     map.QuestLog:Hide(); map:UpdateSpacerFrameAnchoring()
     assert(scroll.points[2][4]==-4,'closing quest log returns its space to the canvas')
     assert(math.abs(map:GetHeight()-((map:GetWidth()-left+right)*artRatio-top+bottom+28))<.00001,
         'collapsed sidebar expands the canvas without letterboxing')
-    assert(rebuilds>0 and math.abs(scroll:GetCanvasScale()-scroll.zoomLevels[1].scale)<.00001,
+    assert(rebuilds==1 and math.abs(scroll:GetCanvasScale()-scroll.zoomLevels[1].scale)<.00001,
         'collapsing the sidebar rebuilds fit zoom after restoring custom anchors')
     scroll.currentScale=scroll.zoomLevels[1].scale*2
     map.QuestLog:Show(); map:UpdateSpacerFrameAnchoring()
+    assert(rebuilds==2,'each native sidebar update rebuilds once without an addon follow-up rebuild')
     assert(scroll.points[2][4]==-337 and math.abs(scroll:GetCanvasScale()-scroll.zoomLevels[1].scale)<.00001,
         'expanding the sidebar fits and centers using native zoom state')
     map:Maximize(); assert(not Maps.customFrame:IsShown() and map.BorderFrame:GetAlpha()==1)
     assert(map.BorderFrame.MaximizeMinimizeFrame:GetParent()==map.BorderFrame)
+    assert(map.BorderFrame.MaximizeMinimizeFrame:GetFrameLevel()==501,
+        'fullscreen toggle stays above native border artwork: '..tostring(map.BorderFrame.MaximizeMinimizeFrame:GetFrameLevel())..' parent '..tostring(Maps.foreverFrame.maximize.parent==map.BorderFrame))
+    for i=1,3 do
+        map:Minimize(); map:Maximize()
+        assert(map.BorderFrame.MaximizeMinimizeFrame:GetFrameLevel()==501)
+    end
     map:Minimize(); assert(Maps.customFrame:IsShown())
     Maps.db.customFrame=false; Maps:Refresh()
     assert(not Maps.customFrame:IsShown() and map.BorderFrame:GetAlpha()==1)
@@ -1088,6 +1229,7 @@ else
         'native detail geometry restored')
     assert(map.QuestLog.DetailsFrame.ScrollFrame.Contents.regions[1].textColor[1]==.2,'restore parchment text colors')
     assert(scroll.points[1][2]==map.TitleCanvasSpacerFrame,'native anchors are restored')
+    scroll.CreateZoomLevels=createZoom
     Maps.initialized=nil; Maps.db.foreverFrameAvailable=nil; Maps:Initialize()
     assert(Maps.db.customFrame==true and Maps.db.foreverFrameAvailable)
     Maps.db.customFrame=false; Maps:Initialize()
@@ -1198,9 +1340,10 @@ end
 -- The native CVar is the source of truth, including edits outside our menu.
 do
     local opacity=.35
+    local writes=0
     local previousCVar,previousNative=C_CVar,WorldMapFrame_SetOpacity
     C_CVar={GetCVar=function(key) assert(key=='worldMapOpacity'); return tostring(opacity) end,
-        SetCVar=function(key,value) assert(key=='worldMapOpacity'); opacity=tonumber(value); Event('CVAR_UPDATE',key) end}
+        SetCVar=function(key,value) writes=writes+1; assert(key=='worldMapOpacity'); opacity=tonumber(value); Event('CVAR_UPDATE',key) end}
     local nativeCalls=0
     WorldMapFrame_SetOpacity=function(value)
         nativeCalls=nativeCalls+1
@@ -1209,6 +1352,32 @@ do
     Maps:ApplyMapOpacity(); assert(Maps:GetMapTransparency()==.35 and nativeCalls==1)
     Maps.optionsUI.opacity.scripts.OnValueChanged(Maps.optionsUI.opacity,60)
     assert(opacity==.6 and math.abs(map:GetAlpha()-.7)<.000001 and math.abs(scroll:GetAlpha()-.61)<.000001)
+    local slider=Maps.optionsUI.opacity
+    local beforeWrites=writes
+    slider.scripts.OnMouseDown(slider,'LeftButton')
+    slider:SetValue(20); slider:SetValue(70)
+    assert(opacity==.6 and writes==beforeWrites,'drag preview must not trigger native CVar listeners')
+    assert(Maps:GetMapTransparency()==.7 and math.abs(map:GetAlpha()-.65)<.000001)
+    -- An unrelated UI refresh must retain the pending value, not read the old CVar.
+    Event('CVAR_UPDATE','worldMapOpacity')
+    assert(Maps:GetMapTransparency()==.7 and slider.value==70)
+    slider.scripts.OnMouseUp(slider,'LeftButton')
+    assert(opacity==.7 and writes==beforeWrites+1 and Maps.opacityPreview==nil)
+    slider.scripts.OnMouseDown(slider,'LeftButton'); slider:SetValue(60)
+    slider.scripts.OnHide(slider)
+    assert(opacity==.6 and Maps.opacityDragSlider==nil,'hiding commits the last preview')
+    if not era then
+        local previousFader=PlayerMovementFrameFader
+        local registered=true
+        PlayerMovementFrameFader={RemoveFrame=function(frame)
+            assert(frame==map); registered=false; frame:SetAlpha(1)
+        end}
+        Maps:ApplyMapOpacity()
+        if registered then map:SetAlpha(1) end
+        assert(not registered and math.abs(map:GetAlpha()-.7)<.000001,
+            'native movement fader must not undo selected map opacity')
+        PlayerMovementFrameFader=previousFader
+    end
     if era then
         Maps.db.customFrame=true; Maps:Refresh(); local modern=map:GetAlpha()
         Maps.db.customFrame=false; Maps:Refresh(); assert(map:GetAlpha()==modern and opacity==.6)
@@ -1248,6 +1417,12 @@ do
         Maps:PlaceOpacityPopup(header)
         popup.slider:SetValue(42)
         assert(opacity==.42 and Maps.optionsUI.opacity.value==42 and popup.slider.value==42)
+        local beforeQuick=writes
+        popup.slider.scripts.OnMouseDown(popup.slider,'LeftButton')
+        popup.slider:SetValue(55)
+        assert(opacity==.42 and writes==beforeQuick and Maps.optionsUI.opacity.value==55)
+        popup.slider.scripts.OnMouseUp(popup.slider,'LeftButton')
+        assert(opacity==.55 and writes==beforeQuick+1)
         opacity=.25; Event('CVAR_UPDATE','worldMapOpacity'); assert(popup.slider.value==25)
         header.scripts.OnClick(header,'RightButton'); assert(not popup:IsShown())
         header.scripts.OnClick(header,'RightButton'); map:Hide(); assert(not popup:IsShown())
@@ -1468,7 +1643,48 @@ assert(account.scale==1 and account.x==.2,'legacy global geometry remains unchan
 PT.RegisterOptionsPage=register
 print('PASS: map character migration, isolation and reset without importing old geometry again.')
 
--- Ownership tracing must be opt-in, bounded and preserve native return values.
+-- Startup tracing must survive first activation, without changing the canvas.
+do
+    local secureVariable=issecurevariable
+    local stackFunction=debugstack
+    local stackCalls=0
+    debugstack=function(start,count,tail)
+        assert(start==3 and count==12 and tail==0,'capture a bounded caller stack')
+        stackCalls=stackCalls+1
+        return 'synthetic first caller\nsynthetic parent'
+    end
+    local unsafe=false
+    issecurevariable=function(object,key)
+        if object==scroll and key=="targetScrollY" and unsafe then return false,"synthetic-owner" end
+        return true
+    end
+    Maps.scrollSecurityStarted=nil; Maps.scrollSecurityStartup=nil
+    Maps.scrollSecurityEnabled=nil; Maps.scrollSecurityRows=nil; Maps.scrollSecurityLast=nil
+    Maps.scrollSecurityOrigin=nil
+    local originalY=rawget(scroll,'targetScrollY')
+    Maps:StartScrollSecurity()
+    assert(#Maps.scrollSecurityRows==1 and Maps.scrollSecurityRows[1]=='before addon setup: secure')
+    unsafe=true; Maps:CaptureScrollSecurity('after synthetic layout')
+    assert(stackCalls==1 and Maps.scrollSecurityOrigin.stage=='after synthetic layout')
+    unsafe=false; Maps:CaptureScrollSecurity('clean again')
+    unsafe=true; Maps:CaptureScrollSecurity('later unsafe state')
+    assert(stackCalls==1 and Maps.scrollSecurityOrigin.stack:find('synthetic first caller',1,true),
+        'retain the first caller chain instead of replacing it with later symptoms')
+    Maps:StartScrollSecurity()
+    assert(#Maps.scrollSecurityRows==4,'startup is idempotent')
+    Maps:ToggleScrollSecurity()
+    assert(#Maps.scrollSecurityRows==4 and Maps.scrollSecurityRows[2]:find('synthetic-owner',1,true),
+        'enabling diagnosis must retain the first observed startup transition')
+    assert(rawget(scroll,'targetScrollY')==originalY,'diagnosis must not write canvas fields')
+    Maps:ToggleScrollSecurity()
+    unsafe=false; Maps:CaptureScrollSecurity('disabled')
+    assert(#Maps.scrollSecurityRows==4,'disabled trace must stop collecting')
+    Maps.scrollSecurityEnabled=nil; Maps.scrollSecurityRows=nil; Maps.scrollSecurityLast=nil
+    issecurevariable=secureVariable
+    debugstack=stackFunction; Maps.scrollSecurityOrigin=nil
+    print('PASS: bounded startup ownership history survives activation and never writes canvas state.')
+end
+-- Manually enabled ownership tracing remains bounded and preserves returns.
 local previousSecureVariable=issecurevariable
 local unsafeScroll=false
 issecurevariable=function(object,key)
@@ -1489,3 +1705,173 @@ Maps:ToggleScrollSecurity()
 assert(not Maps.scrollSecurityEnabled)
 issecurevariable=previousSecureVariable
 print('PASS: opt-in ownership trace records transitions without changing native return values.')
+
+do
+    local nativeMap=Maps.map
+    local secureVariable,hook=issecurevariable,hooksecurefunc
+    local unsafe=false
+    local calls,hooks=0,0
+    local observed={CreateZoomLevels=function() calls=calls+1; unsafe=true; return 1,nil,3,nil end}
+    Maps.map={ScrollContainer=observed}
+    hooksecurefunc=function(...) hooks=hooks+1; return hook(...) end
+    issecurevariable=function(object,key)
+        if object==observed and key=='targetScrollY' and unsafe then return false,'test-owner' end
+        return true
+    end
+    Maps.scrollSecurityEnabled=nil; Maps.scrollSecurityRows=nil; Maps.scrollSecurityLast=nil
+    Maps:InstallScrollSecurityHooks(nil)
+    Maps:InstallScrollSecurityHooks(observed)
+    Maps:InstallScrollSecurityHooks(observed)
+    assert(hooks==1,'repeat install must not duplicate hooks; missing methods skipped')
+    local returned=table.pack(observed:CreateZoomLevels())
+    assert(returned.n==4 and returned[1]==1 and returned[2]==nil and returned[3]==3 and returned[4]==nil)
+    assert(calls==1 and not Maps.scrollSecurityRows,'disabled hooks must not record or execute native code again')
+    unsafe=false; Maps:ToggleScrollSecurity()
+    observed:CreateZoomLevels()
+    assert(#Maps.scrollSecurityRows==2 and Maps.scrollSecurityRows[2]:find('after native CreateZoomLevels',1,true))
+    observed.ResetZoom=function() calls=calls+1; unsafe=false end
+    Maps:InstallScrollSecurityHooks(observed)
+    assert(hooks==2,'methods added after initial installation must get one hook')
+    observed:ResetZoom()
+    assert(calls==3 and Maps.scrollSecurityRows[3]=='after native ResetZoom: secure')
+    issecurevariable=nil
+    local rows=#Maps.scrollSecurityRows
+    observed:CreateZoomLevels()
+    assert(#Maps.scrollSecurityRows==rows,'missing security API must be a no-op')
+    hooksecurefunc=nil
+    Maps:InstallScrollSecurityHooks({CreateZoomLevels=function() end})
+    hooksecurefunc=hook; issecurevariable=secureVariable; Maps.map=nativeMap
+    Maps.scrollSecurityEnabled=nil; Maps.scrollSecurityRows=nil; Maps.scrollSecurityLast=nil
+    print('PASS: passive method hooks are idempotent, tolerate missing APIs, preserve nil return holes and attribute observed stages.')
+end
+
+if not era then
+    local oldCombat,oldProtected,oldMaximized=combat,map.protected,map.maximized
+    local oldStyle,oldMovable=Maps.db.customFrame,Maps.db.movable
+    Maps.db.customFrame=true; Maps.db.movable=true
+    combat=false; map.protected=nil; map.maximized=false; Maps:Refresh()
+    combat=true
+    local width,height,scale=map:GetWidth(),map:GetHeight(),map:GetScale()
+    local builds=nativeZoomBuilds
+    local apply=Maps.ApplyWindow
+    Maps.ApplyWindow=function() error('combat drag must not perform full layout') end
+    Maps.dragBar.scripts.OnDragStart(); assert(Maps.moving,'unprotected Forever map can move in combat')
+    local x=Maps.windowDB.x
+    cursorX=cursorX+50
+    Maps.moveDriver.scripts.OnUpdate()
+    Maps.dragBar.scripts.OnDragStop()
+    assert(Maps.windowDB.x~=x and not Maps.moving)
+    Maps:RestoreCombatWindow()
+    assert(map:GetWidth()==width and map:GetHeight()==height and map:GetScale()==scale and nativeZoomBuilds==builds,
+        'combat movement preserves dimensions and does not rebuild zoom')
+    map.protected=true
+    Maps.dragBar.scripts.OnDragStart(); assert(not Maps.moving,'protected frames remain blocked')
+    Maps.ApplyWindow=apply
+    combat,map.protected,map.maximized=oldCombat,oldProtected,oldMaximized
+    Maps.db.customFrame,Maps.db.movable=oldStyle,oldMovable
+    local buildsBefore=nativeZoomBuilds
+    Maps:QueueForeverViewportRefresh()
+    assert(nativeZoomBuilds==buildsBefore,
+        'queued presentation refresh must never rebuild shared native zoom state')
+    -- Scope regression, not an emulation of WoW's taint engine: native input
+    -- reads and writes must occur inside the barrier, and the diagnostic
+    -- mirror must not become an input to the next native operation.
+    local secure=securecallfunction
+    Maps:ClearExtraZoom()
+    Maps.db.extendedZoom=true; scroll.currentScale=2
+    local pan=scroll.InstantPanAndZoom
+    scroll.InstantPanAndZoom=function() error('addon must not initiate Forever pan/zoom') end
+    scroll.overview='scope-test'
+    Wheel(1)
+    assert(scroll.currentScale==2 and not Maps.extraZoomScale)
+    combat=true; Wheel(-1); combat=false
+    assert(Maps.zoomDiagnostics.reason=='native-only')
+    scroll.overview=nil
+    Wheel(-1); assert(scroll.currentScale==1,'native wheel handler remains active')
+    Wheel(1); assert(scroll.currentScale==2,'native zoom works outside combat')
+    combat=true; Wheel(-1); combat=false
+    assert(scroll.currentScale==1,'native zoom works in combat')
+    scroll.InstantPanAndZoom=pan
+    print('PASS: Forever keeps native zoom in control outside and inside combat without addon pan calls.')
+end
+
+if not era then
+    local inputs=0
+    local function NativeInput(pin,button)
+        assert(not combat,'native marker input configuration must wait for combat end')
+        inputs=inputs+1
+    end
+    MapCanvasPinMixin={CheckMouseButtonPassthrough=NativeInput}
+    SuperTrackablePinMixin={UpdateMousePropagation=NativeInput}
+    local prototype={CheckMouseButtonPassthrough=NativeInput,UpdateMousePropagation=NativeInput}
+    _G.PTTestQuestPinMixin=prototype
+    local pin={GetMap=function() return map end,CheckMouseButtonPassthrough=NativeInput,
+        UpdateMousePropagation=NativeInput}
+    map.pinPools={quest={EnumerateActive=function() return ipairs({pin}) end}}
+    -- Pool enumeration returns pins, unlike ipairs' numeric index.
+    map.pinPools.quest.EnumerateActive=function()
+        local used=false
+        return function() if not used then used=true; return pin end end
+    end
+    Maps:InstallCombatPinInput()
+    assert(Maps.pinInputGuard and prototype.CheckMouseButtonPassthrough~=NativeInput)
+    pin:CheckMouseButtonPassthrough('RightButton'); assert(inputs==1)
+    combat=true
+    pin:CheckMouseButtonPassthrough('RightButton'); pin:UpdateMousePropagation()
+    assert(inputs==1 and Maps.pinInputGuard:PendingCount()==2)
+    local fresh={GetMap=pin.GetMap,CheckMouseButtonPassthrough=prototype.CheckMouseButtonPassthrough}
+    fresh:CheckMouseButtonPassthrough('RightButton')
+    assert(inputs==1 and Maps.pinInputGuard:PendingCount()==3,
+        'a newly created pin inherits guarded template input before acquisition')
+    Maps:ClearExtraZoom(); Maps.db.extendedZoom=true
+    scroll.overview='extended-test'; scroll.currentScale=2
+    Wheel(1)
+    assert(scroll.currentScale==2.5 and Maps.zoomDiagnostics.reason=='applied',
+        'guarded Forever extended zoom remains available in combat')
+    combat=false
+    Maps.pinInputEvents.scripts.OnEvent(nil,'PLAYER_REGEN_ENABLED')
+    assert(inputs==4 and Maps.pinInputGuard:PendingCount()==0)
+    Maps:UpdateOptions()
+    assert(Maps.optionsUI.checks.extendedZoom.checked==true)
+    scroll.overview=nil
+    _G.PTTestQuestPinMixin=nil
+    print('PASS: Forever marker input deferral integrates with combat zoom and replays after combat.')
+end
+
+if not era then
+    Maps.db.customFrame=true; Maps.db.resizable=true
+    map.maximized=false; map.protected=nil; scroll.protected=nil
+    map.minimizedWidth=702
+    Maps.windowDB.scale=.8
+    map.QuestLog:Hide(); Maps:Refresh()
+    assert(map:GetWidth()==702)
+    combat=true
+    assert(Maps:CanChangeWindow(),'guarded unprotected Forever layouts remain editable in combat')
+    for i=1,3 do
+        map.QuestLog:Show(); map:UpdateSpacerFrameAnchoring()
+        assert(map:GetWidth()==1035 and scroll.points[1][4]==4 and scroll.points[2][4]==-337,
+            'expanded combat sidebar must not keep the collapsed canvas snapshot')
+        assert(math.abs(map:GetHeight()-Maps:GetCustomFrameHeight(1035))<.00001)
+        Maps:RestoreCombatWindow()
+        assert(map:GetWidth()==1035,'combat restoration must not undo the new layout')
+        map.QuestLog:Hide(); map:UpdateSpacerFrameAnchoring()
+        assert(map:GetWidth()==702 and scroll.points[2][4]==-4)
+    end
+    map.QuestLog:Show(); map:UpdateSpacerFrameAnchoring()
+    Maps.windowDB.scale=1.2; Maps:ApplyWindow()
+    assert(map:GetWidth()==1035 and math.abs(WindowFactor()-1.2)<.00001)
+    combat=false; Event('PLAYER_REGEN_ENABLED')
+    assert(map:GetWidth()==1035 and math.abs(WindowFactor()-1.2)<.00001)
+    -- Simulate Blizzard recreating the initial window at a different width.
+    map:SetWidth(702); map:SetScale(1)
+    Maps:ApplyWindow()
+    assert(map:GetWidth()==1035 and math.abs(WindowFactor()-1.2)<.00001,
+        'the saved scale must produce the same outer size after reopening/reloading')
+    local builds=nativeZoomBuilds
+    Maps:QueueForeverViewportRefresh(); Maps:QueueForeverViewportRefresh()
+    assert(nativeZoomBuilds==builds,'unchanged presentation must not repeatedly reset zoom')
+    combat=true; map.protected=true
+    assert(not Maps:CanChangeWindow(),'actual protected frames still block layout changes')
+    combat=false; map.protected=nil
+    print('PASS: Forever sidebar toggles and resizing stay coherent through combat and saved-scale restoration.')
+end

@@ -25,7 +25,7 @@ The modern frame supports Classic Era and Forever.
 | --- | --- |
 | `/ptmaps` | Open the Map settings in PatchTools. |
 | `/ptmaps reset` | Reset the map’s position, size and zoom. |
-| `/ptmaps status` | Show map information useful for troubleshooting. |
+| `/ptmaps status` | Open copyable map information for troubleshooting. |
 | `/ptmaps debug` | Open the shared diagnostic report with addon versions and load states. |
 
 You can also use `/patchtoolsmaps` instead of `/ptmaps`.
@@ -63,7 +63,7 @@ Der moderne Rahmen unterstützt Classic Era und Forever.
 | --- | --- |
 | `/ptmaps` | Die Karteneinstellungen in PatchTools öffnen. |
 | `/ptmaps reset` | Position, Größe und Zoom der Karte zurücksetzen. |
-| `/ptmaps status` | Karteninformationen zur Fehlersuche anzeigen. |
+| `/ptmaps status` | Kopierbare Karteninformationen zur Fehlersuche öffnen. |
 | `/ptmaps debug` | Den gemeinsamen Diagnosebericht mit Addon-Versionen und Ladestatus öffnen. |
 
 Statt `/ptmaps` funktioniert auch `/patchtoolsmaps`.

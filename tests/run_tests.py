@@ -20,3 +20,7 @@ for client in ('forever', 'era'):
             lua.execute('assert(loadfile(...))', path.as_posix())
         lua.execute('dofile(...)', (maps / 'tests' / 'maps.lua').as_posix())
         print('Maps integration / UTF-8 / syntax:', client, locale)
+
+lua = LuaRuntime()
+lua.globals().MODULE_PATH = (maps / 'DeferredPinInput.lua').as_posix()
+lua.execute((maps / 'tests' / 'deferred_pin_input.lua').read_text(encoding='utf-8'))

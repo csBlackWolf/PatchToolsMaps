@@ -1,0 +1,44 @@
+{
+  "build": 70888,
+  "client": {
+    "version": "1.60.1.70888",
+    "product": "wowf",
+    "buildConfig": "0597e74b01a3f779d849ffe9b3270196",
+    "cdnConfig": "8ecf609471cb2ea16667be9cc2b7a555",
+    "locale": "deDE",
+    "localOnly": true
+  },
+  "source": "Installed Blizzard client DB2 tables; DBCD JSON exports",
+  "map_art_count": 45,
+  "overlay_count": 572,
+  "skipped": {
+    "unused_art": 501,
+    "missing_tiles": 1,
+    "no_renderable_geometry": 7
+  },
+  "flags_policy": "Accept 0 and 4 observed in this build; reject other flags and player conditions. In-game verification pending.",
+  "verified_texture_count": 972,
+  "texture_size_overrides": 19,
+  "texture_headers_sha256": "d60e29fd20f4dd0e7444c2b75b681a2039bdb2e62fffff6c60e1e47e354c0774",
+  "sha256": {
+    "WorldMapOverlay.db2": "5fe5970fe63f9bf8e7538582d14c147889a3d300f71dfa655f247f4ef71843c5",
+    "WorldMapOverlay.json": "d359d4ef19f2633111359e04ea21f6bab5ff6e1cadf955b0426e0c0ab0838663",
+    "definitions/WorldMapOverlay.dbd": "4fb4e500c42122eef5dde122091800a6b329f634d308ae7f92e1bdbde41cb694",
+    "WorldMapOverlayTile.db2": "a8c4120ff1e5644e44636f9d04919e018d671d46ee0ca07c11d84736f25f7539",
+    "WorldMapOverlayTile.json": "f224b5f4686d2eed0afb5275abd14c8eba25cbe506a62109c41ed2775181ed9d",
+    "definitions/WorldMapOverlayTile.dbd": "e91c52f4deea9ab664c971a72bc5f7fee51a8061e7c99de19cf3fde6692049e6",
+    "UiMapArt.db2": "f241c562acc596373d358f6a231f49487d4326ffb229386e06c9b979a9f290bd",
+    "UiMapArt.json": "2e67c8645615f03093108a7184323e8b1871be3323be7730ec51bd6ee5b13e2f",
+    "definitions/UiMapArt.dbd": "7b43af2b7505c6f556a184b2558b80f2b9a20225cb2ade48f52089d6f27a73ef",
+    "UiMapArtStyleLayer.db2": "961bdc4f662e0a92ac67d0acc4c6c404677cd043a4a09313ae0fcc2fb90daa56",
+    "UiMapArtStyleLayer.json": "3b2f1a8bf710306a393766180471722551ffeeafda3eb5e3a346f1f1b78d182a",
+    "definitions/UiMapArtStyleLayer.dbd": "3a517ed97e15d9241d0b96aaa2cf5fb274358d21ddc9618c8f811684645d6a7c",
+    "UiMapXMapArt.db2": "ca4b2a471c1525086f68ab3f64ac75fd65a59c0d08d15d1f5a53420e938f08b1",
+    "UiMapXMapArt.json": "0c46206b3692fdf7b3e734eabcfbff94293b2b74ffda0628c0888b5d7c4bc2f9",
+    "definitions/UiMapXMapArt.dbd": "1e191995d50b0d67788dd3eeee7f0404e0a53eafd356c84163263edc2a60e9b9"
+  },
+  "catalog_sha256": "a4b3db437cee8247ab2183f7dee5f3073e914d04df2c39891c1dededfaa42ec1",
+  "runtime_catalog_build": 70790,
+  "runtime_catalog_sha256": "4759827269607c69d03167f61cf57a38f2f251232804b850d9d6c6e4252b95c9",
+  "compatibility_validation": "All extracted DB2 tables, decoded tables and verified texture headers match build 70862; normalized generated catalog matches build 70790."
+}

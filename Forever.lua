@@ -42,9 +42,31 @@ function Maps:InstallForeverFrame(map)
     if Frame(maximize) then
         self.foreverFrame.maximize=Capture(maximize)
         self.foreverFrame.maximize.parent=maximize:GetParent()
+        self.foreverFrame.maximize.level=maximize:GetFrameLevel()
     end
-    -- Native display-state changes reset both the window position and canvas
-    -- anchors, including when only the quest-log side panel is toggled.
+    -- UpdateSpacerFrameAnchoring sets this point immediately BEFORE Blizzard
+    -- rebuilds canvas zoom. Apply our geometry at that boundary so the native
+    -- caller continues with the final viewport. A post-hook on the whole
+    -- method was too late and required an unsafe addon-initiated second build.
+    local spacer=map.TitleCanvasSpacerFrame
+    if Frame(spacer) then
+        hooksecurefunc(spacer,"SetPoint",function(_,point)
+            local native=self.foreverFrame
+            if point~="BOTTOMRIGHT" or self.layingOutFrame or native.preparingViewport
+                or not self:UseCustomFrame() or not self:CanChangeWindow() then return end
+            native.preparingViewport=true
+            self:ClearExtraZoom()
+            self:Refresh()
+            native.preparingViewport=nil
+            self:CaptureScrollSecurity("before native spacer rebuild")
+        end)
+    end
+    local scroll=map.ScrollContainer
+    if scroll and type(scroll.OnCanvasSizeChanged)=="function" then
+        hooksecurefunc(scroll,"OnCanvasSizeChanged",function()
+            self.foreverFrame.viewportGeometry=self:GetForeverViewportGeometry()
+        end)
+    end
     if type(map.UpdateSpacerFrameAnchoring)=="function" then
         hooksecurefunc(map,"UpdateSpacerFrameAnchoring",function()
             if not self.layingOutFrame then
@@ -55,22 +77,27 @@ function Maps:InstallForeverFrame(map)
     end
 end
 
+function Maps:GetForeverViewportGeometry()
+    local map=self.map
+    local scroll=map.ScrollContainer
+    return table.concat({map:GetWidth(),map:GetHeight(),scroll:GetWidth(),scroll:GetHeight(),
+        map.QuestLog:IsShown() and 1 or 0},":")
+end
+
 function Maps:QueueForeverViewportRefresh()
     local native=self.foreverFrame
-    if native.viewportPending then return end
+    if native.viewportPending or native.preparingViewport then return end
     native.viewportPending=true
     C_Timer.After(0,function()
         if not self:UseCustomFrame() or not self.map:IsShown() then native.viewportPending=nil; return end
-        if InCombatLockdown and InCombatLockdown() then native.viewportPending=nil; native.viewportDirty=true; return end
-        -- Native sidebar changes rebuild against the native spacers before our
-        -- anchors are restored. Recompute fit and pan once the final layout is
-        -- in place, without a full map rebuild or provider reset.
+        if not self:CanChangeWindow() then native.viewportPending=nil; native.viewportDirty=true; return end
         self:Refresh()
-        if self:GetReadyLayerIndex() then
-            -- Rebuild against the final viewport rather than stale native
-            -- dimensions. Keep pan/fit calculation inside the native method.
-            local scroll=self.map.ScrollContainer
-            self:CallMapFunction(scroll.OnCanvasSizeChanged,scroll)
+        -- Sidebar updates rebuild in the native caller. A direct resize has no
+        -- such caller: refresh once for the final dimensions, with pin input
+        -- changes guarded until combat ends. Never rebuild unchanged geometry.
+        if self.pinInputGuard and native.viewportGeometry~=self:GetForeverViewportGeometry() then
+            self:ClearExtraZoom()
+            self.map.ScrollContainer:OnCanvasSizeChanged()
         end
         native.viewportPending=nil
     end)
@@ -87,10 +114,15 @@ function Maps:LayoutForeverFrame(enabled)
     if maximize then
         if enabled then
             maximize.frame:SetParent(self.customFrame)
+            maximize.frame:SetFrameLevel(self.customFrame:GetFrameLevel()+1)
             maximize.frame:ClearAllPoints()
             maximize.frame:SetPoint("TOPRIGHT",map,"TOPRIGHT",-36,-3)
         elseif wasEnabled then
-            maximize.frame:SetParent(maximize.parent); Restore(maximize)
+            maximize.frame:SetParent(maximize.parent)
+            -- Reparenting lowers this container for modern chrome. Restore its
+            -- native level too, otherwise fullscreen border art covers it.
+            maximize.frame:SetFrameLevel(math.max(maximize.level,maximize.parent:GetFrameLevel()+1))
+            Restore(maximize)
         end
     end
     if enabled then

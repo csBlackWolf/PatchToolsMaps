@@ -3,6 +3,28 @@ function Maps:CanChangeWindow()
     return self.map and self:CanUseMapInCombat()
         and not (self.map.IsMaximized and self.map:IsMaximized())
 end
+function Maps:CanMoveWindow()
+    if self:CanChangeWindow() then return true end
+    local map=self.map
+    return PatchTools and PatchTools.isForever and map
+        and InCombatLockdown and InCombatLockdown()
+        and not map:IsProtected()
+        and not (map.IsMaximized and map:IsMaximized())
+        and self.combatWindow and self:UseCustomFrame()
+end
+function Maps:ApplyDraggedPosition()
+    if self:CanChangeWindow() then self:ApplyWindow(); return end
+    if not self:CanMoveWindow() then return end
+    local map=self.map
+    local ratio=UIParent:GetEffectiveScale()/map:GetEffectiveScale()
+    map:ClearAllPoints()
+    map:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",self.windowDB.x*UIParent:GetWidth()*ratio,self.windowDB.y*UIParent:GetHeight()*ratio)
+    -- Combat restoration must retain the player's new position. Do not change
+    -- dimensions, zoom state, providers or chrome while moving this window.
+    local points={}
+    for i=1,map:GetNumPoints() do points[i]={map:GetPoint(i)} end
+    self.combatWindow.points=points
+end
 function Maps:SavePosition()
     local map=self.map
     local left,top=map:GetLeft(),map:GetTop()
@@ -69,7 +91,7 @@ function Maps:RefreshEraViewport(view)
         self:CallMapFunction(map.OnFrameSizeChanged,map)
         self.viewportRebuildPending=nil
     end
-    self.extraZoomScale=nil
+    self:ClearExtraZoom()
     levels=scroll and scroll.zoomLevels
     if view and type(levels)=="table" and levels[1] and type(scroll.InstantPanAndZoom)=="function" then
         local maximum=scroll:GetScaleForMaxZoom()*(self.db.extendedZoom and 4 or 1)
@@ -126,9 +148,14 @@ function Maps:ApplyWindow()
     else
         map:SetScale(self.originalScale*self.windowDB.scale)
         if self.foreverFrame and self:UseCustomFrame() then
+            -- Native sidebar transitions change the unscaled outer width.
+            -- Reapply the same base geometry before using the saved factor.
+            if type(map.minimizedWidth)=="number" then
+                local width=map.minimizedWidth+(map.QuestLog:IsShown() and map.questLogWidth or 0)
+                if math.abs(map:GetWidth()-width)>.01 then map:SetWidth(width); resized=true end
+            end
             local height=self:GetCustomFrameHeight(map:GetWidth())
-            resized=math.abs(map:GetHeight()-height)>.01
-            if resized then map:SetHeight(height) end
+            if math.abs(map:GetHeight()-height)>.01 then map:SetHeight(height); resized=true end
             self.foreverFrame.customHeight=true
         elseif self.foreverFrame and self.foreverFrame.customHeight then
             map:SetHeight(self.originalHeight)
@@ -156,6 +183,7 @@ function Maps:ApplyWindow()
 end
 
 function Maps:RestoreCombatWindow()
+    if PatchTools and PatchTools.isForever and self.pinInputGuard and self:CanUseMapInCombat() then return end
     local map,layout=self.map,self.combatWindow
     if not map or not layout or not self:UseCustomFrame() or map:IsProtected() then return end
     -- Restore only the layout prepared before combat. Moving/resizing by the
@@ -173,7 +201,8 @@ function Maps:RestoreCombatWindow()
         for _,point in ipairs(layout.points) do map:SetPoint(unpack(point)) end
     end
     self:RestoreCombatFrame()
-    if resized and not map.ScrollContainer:IsProtected() and type(map.OnFrameSizeChanged)=="function" then
+    if resized and PatchTools and PatchTools.isClassicEra
+        and not map.ScrollContainer:IsProtected() and type(map.OnFrameSizeChanged)=="function" then
         map:OnFrameSizeChanged()
     end
 end
@@ -199,7 +228,7 @@ function Maps:ResetWindow()
 end
 function Maps:ResetMap()
     self.closeAfterReset=self.map and self.map:IsShown() or nil
-    self.extraZoomScale=nil
+    self:ClearExtraZoom()
     self.resizing,self.resizeView=nil,nil
     self.zoomPending=true
     self.resetViewPending=true
@@ -250,7 +279,7 @@ function Maps:InstallWindow(map)
     self.moveDriver=CreateFrame("Frame",nil,map)
     local driver=self.moveDriver
     local function Start()
-        if not self:CanChangeWindow() or not self.db.movable then return end
+        if not self:CanMoveWindow() or not self.db.movable then return end
         if map.StopMovingOrSizing then map:StopMovingOrSizing() end
         self:SavePosition()
         local x,y=GetCursorPosition()
@@ -258,12 +287,12 @@ function Maps:InstallWindow(map)
         if not startX or not startY then return end
         self.moving=true
         driver:SetScript("OnUpdate",function()
-            if not self:CanChangeWindow() then driver:SetScript("OnUpdate",nil); self.moving=nil; return end
+            if not self:CanMoveWindow() then driver:SetScript("OnUpdate",nil); self.moving=nil; return end
             local cx,cy=GetCursorPosition()
             local scale=UIParent:GetEffectiveScale()
             self.windowDB.x=startX+(cx-x)/scale/UIParent:GetWidth()
             self.windowDB.y=startY+(cy-y)/scale/UIParent:GetHeight()
-            self:ApplyWindow()
+            self:ApplyDraggedPosition()
         end)
     end
     bar:HookScript("OnDragStart",Start)
@@ -271,7 +300,7 @@ function Maps:InstallWindow(map)
         if not self.moving then return end
         self.moving=nil
         driver:SetScript("OnUpdate",nil)
-        self:ApplyWindow()
+        self:ApplyDraggedPosition()
     end
     bar:HookScript("OnDragStop",Stop)
     if self.customHeader then
@@ -312,7 +341,7 @@ function Maps:InstallWindow(map)
         end)
     end)
     grip:SetScript("OnMouseUp",function() self:FinishResize() end)
-    map:HookScript("OnHide",function() Stop(); self:FinishResize(); self.extraZoomScale=nil end)
+    map:HookScript("OnHide",function() Stop(); self:FinishResize(); self:ClearExtraZoom() end)
     map:HookScript("OnShow",function()
         C_Timer.After(0,function()
             if map:IsShown() then

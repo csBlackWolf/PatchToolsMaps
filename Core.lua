@@ -8,7 +8,9 @@ function Maps:Refresh(rebuildZoom)
     if not self.map then self:Attach(); return end
     if self.customFrame and not (InCombatLockdown and InCombatLockdown()) then self:DiscoverFrameWidgets() end
     if InCombatLockdown and InCombatLockdown() then self:RestoreCombatWindow() end
+    self:CaptureScrollSecurity("before window refresh")
     if self.resetPending then self:ResetWindow() else self:ApplyWindow() end
+    self:CaptureScrollSecurity("after window refresh")
     if InCombatLockdown and InCombatLockdown() then self:RestoreCombatWindow(); self:RestoreCombatFrame() end
     self:ApplyMapOpacity()
     if self.foreverFrame and self.foreverFrame.viewportDirty and not (InCombatLockdown and InCombatLockdown()) then
@@ -25,8 +27,9 @@ function Maps:Refresh(rebuildZoom)
         local scroll=self.map.ScrollContainer
         if scroll and type(scroll.ResetZoom)=="function" then
             if PatchTools and PatchTools.isForever and type(scroll.OnCanvasSizeChanged)=="function" then
-                -- Let native code choose its reset parameters on Forever.
-                self:CallMapFunction(scroll.OnCanvasSizeChanged,scroll)
+                -- ResetMap closes the window below. Its next native opening
+                -- rebuilds zoom after our spacer hook prepared the geometry.
+                self:ClearExtraZoom()
             elseif securecallfunction then securecallfunction(scroll.ResetZoom,scroll,true)
             else scroll:ResetZoom(true) end
             self.resetViewPending=nil
@@ -46,9 +49,17 @@ end
 function Maps:Attach()
     if self.map or (InCombatLockdown and InCombatLockdown()) or not WorldMapFrame or not WorldMapFrame.GetCanvas then return end
     self.map=WorldMapFrame
+    if PatchTools then
+        PatchTools.diagnosticProviders=PatchTools.diagnosticProviders or {}
+        PatchTools.diagnosticProviders.PatchToolsMaps=function() return self:BuildZoomStatus() end
+    end
+    if PatchTools and PatchTools.isForever then self:StartScrollSecurity() end
+    self:InstallCombatPinInput()
     self:InstallCustomFrame(self.map)
+    self:CaptureScrollSecurity("after custom frame setup")
     self:InstallWindow(self.map)
-    local function Reveal() self.extraZoomScale=nil; self:RefreshReveal() end
+    self:CaptureScrollSecurity("after window setup")
+    local function Reveal() self:ClearExtraZoom(); self:RefreshReveal() end
     for _,method in ipairs({"OnMapChanged","OnCanvasSizeChanged"}) do
         if type(self.map[method])=="function" then hooksecurefunc(self.map,method,Reveal) end
     end
@@ -118,6 +129,8 @@ function Maps:Initialize()
                 self:ToggleScrollSecurity()
             elseif (message or ""):lower():match("^%s*status%s*$") then
                 self:PrintZoomStatus()
+            elseif (message or ""):lower():match("^%s*trace%s*$") then
+                self:PrintScrollSecurityOrigin()
             elseif (message or ""):lower():match("^%s*reset%s*$") then
                 self:ResetMap()
                 PT:Print(self:T(InCombatLockdown and InCombatLockdown() and "RESET_PENDING" or "RESET_DONE"))

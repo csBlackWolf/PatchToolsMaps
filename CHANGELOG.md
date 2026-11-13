@@ -1,3 +1,13 @@
+# PatchToolsMaps 0.3.4 — 2026-11-13
+
+- Keep unexplored-area previews available after client patches using the last matching map data. Temporarily outdated previews no longer require a new release just to enable them again.
+- Restore reliable map transparency and a smooth slider preview without the setting being overwritten.
+- Improve Forever combat map interactions and quest-sidebar layout, including resizing and restoring the saved window size.
+- Restore the visible button for returning from fullscreen to the movable map.
+- Make map diagnostics copyable when supported by the installed PatchTools version.
+
+Validation: automated Classic Era/Forever integration checks in three locales, catalog checks and deferred marker-input tests pass. The maintainer tested the current Forever map in normal gameplay without further errors. Terrain/minimap detail views are not part of this release.
+
 # PatchToolsMaps 0.3.3 — 2026-11-06
 
 - Restore semi-transparent fog and full reveal on Forever build 70790, including Duskwood.

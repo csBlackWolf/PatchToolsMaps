@@ -58,4 +58,16 @@ Generate into a separate output directory with --build 70003 --skip-invalid-text
 
 The installed product is now `wowf` (version 1.60.1.70790), rather than the former `wow_classic_beta`. Export with `MAPEXTRACT_LOCALE=deDE`, the current `.build.info` configuration and the existing six-table extract list. If TACTSharp has loaded the root but the optional executable install manifest is missing locally, the exporter continues; every required table and texture must still be readable locally.
 
-Generate into a separate output directory with `--build 70790`. Keep the resulting files as `GeneratedCatalogForever70790.lua` and `CATALOG-MANIFEST-FOREVER-70790.json`, preserving older verified builds. The catalog contains 572 overlays across 45 map arts, with 972 used textures and 19 dimension overrides. Duskwood (UiMap 1431) maps to art 2152. A new build needs its own verified catalog; geometry equality alone is not permission to bypass the exact-build check.
+Generate into a separate output directory with `--build 70790`. Keep the resulting files as `GeneratedCatalogForever70790.lua` and `CATALOG-MANIFEST-FOREVER-70790.json`, preserving older verified builds. The catalog contains 572 overlays across 45 map arts, with 972 used textures and 19 dimension overrides. Duskwood (UiMap 1431) maps to art 2152. A new build should be checked against its own exported catalog. Until that check is available, the runtime keeps the newest bundled catalog for the same product as a best-effort preview.
+
+## Verified compatible build 70862
+
+The same local extraction and texture-header verification was repeated for `wowf` 1.60.1.70862. All six source DB2 files, decoded tables, definitions, texture headers and generated catalog (after normalizing only the build key) are identical to 70790. `CatalogCompatibility.lua` explicitly maps 70862 to that existing dataset, including its texture-size overrides. Provenance is recorded in `CATALOG-MANIFEST-FOREVER-70862.json`. Unlisted builds remain gated and the options page shows a specific missing-data message. Do not infer compatibility from a nearby build number alone.
+
+Build 70938 was checked against the installed Forever client. All six exported tables and their decoded JSON, texture headers and the normalized generated catalog match the verified prior dataset. `CATALOG-MANIFEST-FOREVER-70938.json` records the comparison; the runtime uses an explicit alias to build 70790. Unknown builds use the same-product fallback described below until verification is available.
+
+## Preview continuity across client patches
+
+The preview stays available on an unknown build using the newest bundled catalog for its own product. Forever and Classic Era catalogs are never mixed. Art ID, layer index, map dimensions and tile dimensions must still match the current client. An absent art or changed geometry keeps only that map on its native display. Existing texture-size overrides follow the selected catalog too.
+
+The options and diagnostic report distinguish a verified build from this fallback. Matching geometry does not prove the contents are current: a client patch can change textures without changing dimensions. Temporary outdated preview data is an accepted tradeoff for keeping the feature usable while development and release testing continue. Do not add a whole-build shutdown again. Continue to check client exports and update changed maps as part of normal maintenance.

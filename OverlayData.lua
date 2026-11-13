@@ -2,9 +2,32 @@ local _, Maps = ...
 -- The generated catalog is loaded next; learned entries use ContextKey below.
 Maps.catalog = {}
 
+-- A client patch must not disable the preview while a catalog update is pending.
+-- Keep product families separate: matching dimensions alone do not identify a map.
+function Maps:GetCatalogSelection()
+    local builds=self.catalogProductBuilds and PatchTools and
+        self.catalogProductBuilds[PatchTools.isForever and "forever" or PatchTools.isClassicEra and "era" or ""]
+    if not builds then return nil,"unavailable" end
+    local _,client=GetBuildInfo()
+    client=tonumber(client)
+    local alias=self.catalogBuildAliases and self.catalogBuildAliases[client]
+    for _,build in ipairs(builds) do
+        if self.catalog[build] and (build==client or build==alias) then return build,"verified" end
+    end
+    for _,build in ipairs(builds) do
+        if self.catalog[build] then return build,"fallback" end
+    end
+    return nil,"unavailable"
+end
+
+function Maps:GetCatalogBuild()
+    local build=self:GetCatalogSelection()
+    return build
+end
+
 function Maps:GetCatalog(artID, layerIndex, layer)
-    local _, build = GetBuildInfo()
-    local arts = self.catalog[tonumber(build)]
+    local build=self:GetCatalogBuild()
+    local arts = build and self.catalog[build]
     local layers = arts and arts[artID]
     local key = table.concat({layerIndex, layer.layerWidth, layer.layerHeight,
         layer.tileWidth, layer.tileHeight}, ":")

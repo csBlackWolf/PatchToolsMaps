@@ -5,8 +5,8 @@ local function FileSize(pixels)
     return size
 end
 function Maps:TextureSize(fdid, width, height)
-    local _,build=GetBuildInfo()
-    local sizes=self.catalogTextureSizes and self.catalogTextureSizes[tonumber(build)]
+    local build=self:GetCatalogBuild()
+    local sizes=build and self.catalogTextureSizes and self.catalogTextureSizes[build]
     local actual=sizes and sizes[fdid]
     if actual and actual[1]>=width and actual[2]>=height then return actual[1],actual[2] end
     return FileSize(width),FileSize(height)
@@ -36,6 +36,39 @@ function Maps:GetReadyLayerIndex()
     if not container or type(container.zoomLevels)~="table" or #container.zoomLevels==0
         or type(container.GetCurrentLayerIndex)~="function" then return nil end
     return container:GetCurrentLayerIndex()
+end
+function Maps:BuildRevealStatus()
+    local mapID=self.map and self.map:GetMapID()
+    local artID=mapID and C_Map and C_Map.GetMapArtID(mapID)
+    local layers=mapID and C_Map and C_Map.GetMapArtLayers(mapID)
+    local index=self:GetReadyLayerIndex()
+    local layer=layers and index and layers[index]
+    local _,build=GetBuildInfo()
+    local catalogBuild,catalogSource=self:GetCatalogSelection()
+    local prefix="Reveal: mode="..tostring(self.db.mode).."; client="..tostring(build)
+        .."; catalogBuild="..tostring(catalogBuild).."; catalogSource="..catalogSource.."; art="..tostring(artID).."; layer="..tostring(index)
+    if not layer or not artID then return prefix.."; layer not ready" end
+    local catalog=self:GetCatalog(artID,index,layer)
+    local explored=C_MapExplorationInfo.GetExploredMapTextures(mapID) or {}
+    local known=self.db.knownOverlays[self:ContextKey(mapID,artID,index,layer)] or {}
+    local combined={}
+    for key,overlay in pairs(known) do combined[key]=overlay end
+    local validCatalog,hover,top,learned=0,0,0,0
+    for _ in pairs(known) do learned=learned+1 end
+    for _,overlay in ipairs(catalog) do
+        local valid,key=self:ValidateOverlay(overlay,layer)
+        if valid then validCatalog=validCatalog+1; combined[key]=valid end
+    end
+    for _,overlay in ipairs(explored) do
+        if overlay.isShownByMouseOver then hover=hover+1 end
+        if overlay.isDrawOnTopLayer then top=top+1 end
+    end
+    local visible=0
+    for _,texture in ipairs(self.textures or {}) do if texture:IsShown() then visible=visible+1 end end
+    return prefix.."; geometry="..table.concat({layer.layerWidth,layer.layerHeight,layer.tileWidth,layer.tileHeight},"x")
+        .."; catalog="..#catalog.."; valid="..validCatalog.."; learned="..learned.."; native="..#explored
+        .."; hover="..hover.."; top="..top.."; planned="..#self:PlanOverlays(combined,explored,layer,self.db.mode)
+        .."; visibleTiles="..visible
 end
 function Maps:RefreshReveal()
     self:ClearReveal()

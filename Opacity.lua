@@ -6,6 +6,7 @@ local function Bounded(value)
 end
 
 function Maps:GetMapTransparency()
+    if self.opacityPreview~=nil then return self.opacityPreview end
     local get=C_CVar and C_CVar.GetCVar or GetCVar
     if get then
         local ok,value=pcall(get,"worldMapOpacity")
@@ -16,12 +17,21 @@ end
 
 function Maps:SetMapTransparency(value)
     value=Bounded(value)
+    if self.opacityDragSlider then
+        self.opacityPreview=value
+        self:ApplyMapOpacity()
+        self:UpdateOptions()
+        self:UpdateOpacityPopup()
+        return
+    end
     local get=C_CVar and C_CVar.GetCVar or GetCVar
     local set=C_CVar and C_CVar.SetCVar or SetCVar
     local ok,current
     if get then ok,current=pcall(get,"worldMapOpacity") end
     if ok and tonumber(current) and set then
-        pcall(set,"worldMapOpacity",tostring(value))
+        if math.abs(tonumber(current)-value)>.000001 then
+            pcall(set,"worldMapOpacity",tostring(value))
+        end
     else
         self.db.transparency=value
     end
@@ -30,12 +40,32 @@ function Maps:SetMapTransparency(value)
     self:UpdateOpacityPopup()
 end
 
+-- Preview while dragging without repeatedly triggering Blizzard's CVar listeners.
+-- Keyboard changes still commit immediately. Hiding the slider also finishes a drag.
+function Maps:BindOpacitySlider(slider)
+    local function Finish()
+        if self.opacityDragSlider~=slider then return end
+        local value=self.opacityPreview
+        self.opacityDragSlider=nil
+        self.opacityPreview=nil
+        self:SetMapTransparency(value)
+    end
+    slider:HookScript("OnMouseDown",function(_,button)
+        if button~="LeftButton" then return end
+        self.opacityPreview=self:GetMapTransparency()
+        self.opacityDragSlider=slider
+    end)
+    slider:HookScript("OnMouseUp",Finish)
+    slider:HookScript("OnHide",Finish)
+end
+
 function Maps:UpdateOpacityPopup()
     local popup=self.opacityPopup
     if not popup or not popup:IsShown() then return end
     self.updatingQuickOpacity=true
     local value=math.floor(self:GetMapTransparency()*100+.5)
-    popup.slider:SetValue(value); popup.title:SetText(self:T("QUICK_TRANSPARENCY",value))
+    if self.opacityDragSlider~=popup.slider then popup.slider:SetValue(value) end
+    popup.title:SetText(self:T("QUICK_TRANSPARENCY",value))
     self.updatingQuickOpacity=nil
 end
 
@@ -80,6 +110,7 @@ function Maps:ToggleOpacityPopup(anchor)
         slider:SetScript("OnValueChanged",function(_,value)
             if not self.updatingQuickOpacity then self:SetMapTransparency(math.floor(value+.5)/100) end
         end)
+        self:BindOpacitySlider(slider)
         popup:SetScript("OnShow",function() self:UpdateOpacityPopup() end)
         local function OutsideClick(button)
             if not popup:IsShown() or popup:IsMouseOver() then return end
@@ -121,6 +152,13 @@ end
 function Maps:ApplyMapOpacity()
     if not self.map then return end
     if InCombatLockdown and InCombatLockdown() then return end
+    -- Forever registers a movement fader on every opening. Its maxAlpha=1
+    -- otherwise undoes the selected opacity on the following frames, even at rest.
+    -- Remove only this map; other windows and the mapFade preference stay intact.
+    if PatchTools.isForever and PlayerMovementFrameFader
+        and type(PlayerMovementFrameFader.RemoveFrame)=="function" then
+        PlayerMovementFrameFader.RemoveFrame(self.map)
+    end
     local value=self:GetMapTransparency()
     -- Match Blizzard: fullscreen stays opaque; minimized maps use the CVar.
     if self.map.IsMaximized and self.map:IsMaximized() then value=0 end
